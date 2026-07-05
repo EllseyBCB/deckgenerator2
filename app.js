@@ -34,7 +34,6 @@
     cornerMode: 4,                   // 0 | 2 | 4
     cornerScale: 0.15,
     cornerInset: 0.05,
-    cornerRotate: true,
     outWidth: 660
   };
   var settings = loadSettings();
@@ -277,15 +276,15 @@
       var cw = ch * ((num.naturalWidth || num.width) / (num.naturalHeight || num.height));
       var insetX = settings.cornerInset * W;
       var insetY = settings.cornerInset * W; // gleicher px-Abstand oben/unten wie seitlich
-      var rot = settings.cornerRotate ? 180 : 0;
 
-      var tl = { x: insetX + cw / 2, y: insetY + ch / 2, r: 0 };
-      var br = { x: W - insetX - cw / 2, y: H - insetY - ch / 2, r: rot };
-      var tr = { x: W - insetX - cw / 2, y: insetY + ch / 2, r: 0 };
-      var bl = { x: insetX + cw / 2, y: H - insetY - ch / 2, r: rot };
+      // Alle Ecken-Zahlen stehen aufrecht (nie kopfüber).
+      var tl = { x: insetX + cw / 2, y: insetY + ch / 2 };
+      var br = { x: W - insetX - cw / 2, y: H - insetY - ch / 2 };
+      var tr = { x: W - insetX - cw / 2, y: insetY + ch / 2 };
+      var bl = { x: insetX + cw / 2, y: H - insetY - ch / 2 };
 
       var corners = settings.cornerMode === 2 ? [tl, br] : [tl, tr, bl, br];
-      corners.forEach(function (p) { drawGlyph(ctx, num, p.x, p.y, ch, p.r); });
+      corners.forEach(function (p) { drawGlyph(ctx, num, p.x, p.y, ch, 0); });
     }
   }
 
@@ -368,12 +367,6 @@
       settings.cornerMode = parseInt(cornerMode.value, 10); saveSettings(); updatePreview();
     });
 
-    var cornerRotate = $('cornerRotate');
-    cornerRotate.checked = settings.cornerRotate;
-    cornerRotate.addEventListener('change', function () {
-      settings.cornerRotate = cornerRotate.checked; saveSettings(); updatePreview();
-    });
-
     var outWidth = $('outWidth');
     outWidth.value = settings.outWidth;
     outWidth.addEventListener('change', function () {
@@ -403,7 +396,6 @@
     });
     $('centerOn').checked = settings.centerOn;
     $('cornerMode').value = String(settings.cornerMode);
-    $('cornerRotate').checked = settings.cornerRotate;
     $('outWidth').value = settings.outWidth;
   }
 
