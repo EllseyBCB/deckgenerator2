@@ -84,10 +84,15 @@
             <option value="4">Alle 4 Ecken</option>
           </select>
         </label>
-        <label>Größe
+        <p class="hint">
+          Die Ecken-Größe gilt pro Zahl. Wähle oben in der Vorschau eine Zahl und
+          stelle deren Ecken-Größe hier ein.
+        </p>
+        <label>Größe <span id="cornerScaleFor" class="for-tag"></span>
           <input type="range" id="cornerScale" min="0.03" max="0.35" step="0.005" />
           <output id="cornerScaleOut"></output>
         </label>
+        <button type="button" id="cornerApplyAll" class="secondary small">Diese Größe für alle Zahlen übernehmen</button>
         <label>Rand-Abstand
           <input type="range" id="cornerInset" min="0" max="0.2" step="0.005" />
           <output id="cornerInsetOut"></output>
@@ -124,6 +129,6 @@
     </p>
   </footer>
 
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

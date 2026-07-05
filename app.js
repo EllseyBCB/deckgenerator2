@@ -32,10 +32,11 @@
     centerX: 0,                      // Anteil der Breite
     centerY: 0,                      // Anteil der Höhe
     cornerMode: 4,                   // 0 | 2 | 4
-    cornerScale: 0.15,
+    cornerScalePer: {},              // Ecken-Größe pro Zahl 1..13 (unten gefüllt)
     cornerInset: 0.05,
     outWidth: 660
   };
+  NUMBERS.forEach(function (n) { defaults.cornerScalePer[n] = 0.15; });
   var settings = loadSettings();
 
   // ---- DOM Refs ---------------------------------------------------------
@@ -200,6 +201,18 @@
     return { type: 'number', color: letter, num: parseInt(rest, 10) };
   }
 
+  // Ecken-Größe (Anteil der Kartenhöhe) für eine bestimmte Zahl.
+  function cornerScaleFor(n) {
+    var p = settings.cornerScalePer;
+    return (p && typeof p[n] === 'number') ? p[n] : 0.15;
+  }
+
+  // Zahl der aktuell in der Vorschau gewählten Karte (null bei Zauberer/Narr).
+  function currentPreviewNum() {
+    var spec = parseCardId(previewSelect.value || 'R7');
+    return spec.type === 'number' ? spec.num : null;
+  }
+
   // ---- Zeichnen ---------------------------------------------------------
   // "cover": Bild mittig so skalieren/zuschneiden, dass es dw×dh KOMPLETT füllt
   // (kein Rand). Garantiert Design an allen 4 Kanten.
@@ -272,7 +285,7 @@
 
     // Ecken-Zahlen
     if (settings.cornerMode === 2 || settings.cornerMode === 4) {
-      var ch = settings.cornerScale * H;
+      var ch = cornerScaleFor(spec.num) * H;
       var cw = ch * ((num.naturalWidth || num.width) / (num.naturalHeight || num.height));
       var insetX = settings.cornerInset * W;
       var insetY = settings.cornerInset * W; // gleicher px-Abstand oben/unten wie seitlich
@@ -326,6 +339,25 @@
     } else {
       previewNote.textContent = 'Dateiname: ' + spec.color + spec.num + '.png';
     }
+    syncCornerScaleControl();
+  }
+
+  // Ecken-Größe-Regler auf die aktuell gewählte Zahl spiegeln.
+  function syncCornerScaleControl() {
+    var el = $('cornerScale'), out = $('cornerScaleOut'), forEl = $('cornerScaleFor');
+    if (!el) return;
+    var n = currentPreviewNum();
+    if (n == null) {                 // Zauberer/Narr: keine Ecken-Zahl
+      el.disabled = true;
+      if (out) out.textContent = '–';
+      if (forEl) forEl.textContent = '(–)';
+      return;
+    }
+    el.disabled = false;
+    var v = cornerScaleFor(n);
+    el.value = v;
+    if (out) out.textContent = pct(v);
+    if (forEl) forEl.textContent = '(Zahl ' + n + ')';
   }
 
   function refreshAll() {
@@ -352,8 +384,29 @@
     bindRange('centerScale', 'centerScale', pct);
     bindRange('centerX', 'centerX', pct);
     bindRange('centerY', 'centerY', pct);
-    bindRange('cornerScale', 'cornerScale', pct);
     bindRange('cornerInset', 'cornerInset', pct);
+
+    // Ecken-Größe: gilt pro Zahl (die in der Vorschau gewählte).
+    var cornerScaleEl = $('cornerScale'), cornerScaleOut = $('cornerScaleOut');
+    cornerScaleEl.addEventListener('input', function () {
+      var n = currentPreviewNum();
+      if (n == null) return;
+      if (!settings.cornerScalePer) settings.cornerScalePer = {};
+      settings.cornerScalePer[n] = parseFloat(cornerScaleEl.value);
+      if (cornerScaleOut) cornerScaleOut.textContent = pct(settings.cornerScalePer[n]);
+      saveSettings();
+      updatePreview();
+    });
+    var applyAll = $('cornerApplyAll');
+    if (applyAll) applyAll.addEventListener('click', function () {
+      var n = currentPreviewNum();
+      if (n == null) return;
+      var v = cornerScaleFor(n);
+      if (!settings.cornerScalePer) settings.cornerScalePer = {};
+      NUMBERS.forEach(function (k) { settings.cornerScalePer[k] = v; });
+      saveSettings();
+      updatePreview();
+    });
 
     var centerOn = $('centerOn');
     centerOn.checked = settings.centerOn;
@@ -390,11 +443,12 @@
   }
 
   function syncControlsFromSettings() {
-    ['centerScale','centerX','centerY','cornerScale','cornerInset'].forEach(function (k) {
+    ['centerScale','centerX','centerY','cornerInset'].forEach(function (k) {
       var el = $(k); var out = $(k + 'Out');
       if (el) el.value = settings[k];
       if (out) out.textContent = pct(settings[k]);
     });
+    syncCornerScaleControl();
     var setVal = function (id, v) {
       var el = $(id);
       if (!el) return;
