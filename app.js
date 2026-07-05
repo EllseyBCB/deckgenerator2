@@ -62,8 +62,10 @@
 
     var placeholder = document.createElement('div');
     placeholder.className = 'placeholder';
-    placeholder.innerHTML = '<div class="label">' + opts.label + '</div>' +
-      (opts.sublabel ? '<div class="sublabel">' + opts.sublabel + '</div>' : '');
+    placeholder.innerHTML =
+      '<div class="up-badge">+</div>' +
+      '<div class="label">' + opts.label + '</div>' +
+      '<div class="sublabel">' + (opts.sublabel ? opts.sublabel + ' · ' : '') + 'Bild hochladen</div>';
 
     var labelBar = document.createElement('div');
     labelBar.className = 'label';
