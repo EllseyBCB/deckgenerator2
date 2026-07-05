@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wizard Kartendeck-Generator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🧙 Wizard Kartendeck-Generator</h1>
+    <p class="subtitle">
+      Lade deine Bilder hoch – das Tool baut alle 60 Karten und packt sie in eine
+      ZIP-Datei, die du direkt ins Spiel einfügen kannst. Alles läuft lokal im
+      Browser, deine Bilder verlassen deinen Rechner nicht.
+    </p>
+  </header>
+
+  <main class="layout">
+    <!-- Linke Spalte: Uploads -->
+    <section class="panel uploads">
+      <h2>1 · Bilder hochladen</h2>
+
+      <h3>Farb-Designs (Hintergrund je Farbe)</h3>
+      <p class="hint">Ein Bild pro Farbe. Wird randlos auf 33:50 zugeschnitten.</p>
+      <div class="grid grid-colors" id="colorSlots"></div>
+
+      <h3>Zahlen 1–13</h3>
+      <p class="hint">
+        Immer dieselbe Farbe – wird auf jeden Farbhintergrund montiert.
+        Transparenter Hintergrund (PNG) empfohlen.
+      </p>
+      <div class="grid grid-numbers" id="numberSlots"></div>
+
+      <h3>Sonderkarten</h3>
+      <p class="hint">Je 1 Bild, wird 4× verwendet (Z1–Z4 / N1–N4). Ohne Zahl.</p>
+      <div class="grid grid-special" id="specialSlots"></div>
+    </section>
+
+    <!-- Mittlere Spalte: Vorschau -->
+    <section class="panel preview">
+      <h2>2 · Live-Vorschau</h2>
+      <div class="preview-controls">
+        <label>Beispielkarte:
+          <select id="previewSelect"></select>
+        </label>
+      </div>
+      <div class="preview-stage">
+        <canvas id="previewCanvas" width="330" height="500"></canvas>
+      </div>
+      <p class="hint" id="previewNote"></p>
+    </section>
+
+    <!-- Rechte Spalte: Einstellungen -->
+    <section class="panel settings">
+      <h2>3 · Einstellungen</h2>
+
+      <fieldset>
+        <legend>Zahl mittig (groß)</legend>
+        <label>Größe
+          <input type="range" id="centerScale" min="0.05" max="0.9" step="0.01" />
+          <output id="centerScaleOut"></output>
+        </label>
+        <label>Versatz X
+          <input type="range" id="centerX" min="-0.4" max="0.4" step="0.01" />
+          <output id="centerXOut"></output>
+        </label>
+        <label>Versatz Y
+          <input type="range" id="centerY" min="-0.4" max="0.4" step="0.01" />
+          <output id="centerYOut"></output>
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="centerOn" /> Mittige Zahl anzeigen
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Zahl in Ecken (klein)</legend>
+        <label>Ecken
+          <select id="cornerMode">
+            <option value="0">Keine</option>
+            <option value="2">2 diagonal (oben-links / unten-rechts)</option>
+            <option value="4">Alle 4 Ecken</option>
+          </select>
+        </label>
+        <label>Größe
+          <input type="range" id="cornerScale" min="0.03" max="0.35" step="0.005" />
+          <output id="cornerScaleOut"></output>
+        </label>
+        <label>Rand-Abstand
+          <input type="range" id="cornerInset" min="0" max="0.2" step="0.005" />
+          <output id="cornerInsetOut"></output>
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="cornerRotate" /> Untere Ecken um 180° drehen
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Ausgabe</legend>
+        <label>Breite (px)
+          <input type="number" id="outWidth" min="132" max="1320" step="1" />
+        </label>
+        <p class="hint" id="outSizeNote"></p>
+      </fieldset>
+
+      <button id="resetBtn" class="secondary" type="button">Einstellungen zurücksetzen</button>
+    </section>
+  </main>
+
+  <section class="panel generate">
+    <h2>4 · Deck erzeugen</h2>
+    <div id="validation" class="validation"></div>
+    <button id="generateBtn" class="primary" type="button">Deck generieren (60 Karten) → ZIP</button>
+    <div class="progress" id="progressWrap" hidden>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <span id="progressLabel"></span>
+    </div>
+    <a id="downloadLink" hidden></a>
+  </section>
+
+  <footer class="app-footer">
+    <p>
+      Format je Karte: PNG · exakt 33:50 · Rahmen randlos an allen Kanten ·
+      Dateien: R1–R13, Y1–Y13, G1–G13, B1–B13, Z1–Z4, N1–N4 · keine back.png
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
