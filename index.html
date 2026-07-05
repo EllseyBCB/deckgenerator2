@@ -64,11 +64,11 @@
           <output id="centerScaleOut"></output>
         </label>
         <label>Versatz X
-          <input type="range" id="centerX" min="-0.4" max="0.4" step="0.01" />
+          <input type="range" id="centerX" min="-0.6" max="0.6" step="0.01" />
           <output id="centerXOut"></output>
         </label>
         <label>Versatz Y
-          <input type="range" id="centerY" min="-0.4" max="0.4" step="0.01" />
+          <input type="range" id="centerY" min="-0.6" max="0.6" step="0.01" />
           <output id="centerYOut"></output>
         </label>
         <label class="checkbox">
@@ -96,15 +96,15 @@
         <button type="button" id="cornerApplyAll" class="secondary small">Diese Größe für alle Zahlen übernehmen</button>
         <p class="hint">Position der Ecken-Zahlen (gilt für alle Zahlen):</p>
         <label>Abstand oben
-          <input type="range" id="cornerInsetTop" min="0" max="0.3" step="0.005" />
+          <input type="range" id="cornerInsetTop" min="-0.2" max="0.45" step="0.005" />
           <output id="cornerInsetTopOut"></output>
         </label>
         <label>Abstand unten
-          <input type="range" id="cornerInsetBottom" min="0" max="0.3" step="0.005" />
+          <input type="range" id="cornerInsetBottom" min="-0.2" max="0.45" step="0.005" />
           <output id="cornerInsetBottomOut"></output>
         </label>
         <label>Abstand seitlich (außen ↔ innen)
-          <input type="range" id="cornerInsetSide" min="0" max="0.3" step="0.005" />
+          <input type="range" id="cornerInsetSide" min="-0.2" max="0.45" step="0.005" />
           <output id="cornerInsetSideOut"></output>
         </label>
       </fieldset>
@@ -163,9 +163,9 @@
       Format je Karte: PNG · exakt 33:50 · Rahmen randlos an allen Kanten ·
       Dateien: R1–R13, Y1–Y13, G1–G13, B1–B13, Z1–Z4, N1–N4 · keine back.png
     </p>
-    <p>Version <strong id="appVersion">12</strong> · Ecken-Position (oben/unten/seitlich) einstellbar</p>
+    <p>Version <strong id="appVersion">13</strong> · größerer Verschiebe-Bereich (auch über den Rand)</p>
   </footer>
 
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>
