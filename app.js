@@ -392,11 +392,17 @@
   function syncControlsFromSettings() {
     ['centerScale','centerX','centerY','cornerScale','cornerInset'].forEach(function (k) {
       var el = $(k); var out = $(k + 'Out');
-      el.value = settings[k]; if (out) out.textContent = pct(settings[k]);
+      if (el) el.value = settings[k];
+      if (out) out.textContent = pct(settings[k]);
     });
-    $('centerOn').checked = settings.centerOn;
-    $('cornerMode').value = String(settings.cornerMode);
-    $('outWidth').value = settings.outWidth;
+    var setVal = function (id, v) {
+      var el = $(id);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = v; else el.value = v;
+    };
+    setVal('centerOn', settings.centerOn);
+    setVal('cornerMode', String(settings.cornerMode));
+    setVal('outWidth', settings.outWidth);
   }
 
   function updateOutSizeNote() {
@@ -639,12 +645,20 @@
   }
 
   // ---- Init -------------------------------------------------------------
+  // Jeder Schritt einzeln abgesichert: Selbst wenn ein Bedienelement fehlt
+  // (z. B. veraltete HTML/JS-Mischung aus dem Browser-Cache), wird die
+  // Vorschau am Ende in JEDEM Fall gezeichnet.
+  function step(name, fn) {
+    try { fn(); } catch (e) { if (window.console) console.error('[' + name + ']', e); }
+  }
+
   function init() {
-    buildSlots();
-    buildPreviewOptions();
-    bindControls();
-    syncControlsFromSettings();
-    refreshAll();
+    step('buildSlots', buildSlots);
+    step('buildPreviewOptions', buildPreviewOptions);
+    step('bindControls', bindControls);
+    step('syncControlsFromSettings', syncControlsFromSettings);
+    step('refreshAll', refreshAll);
+    step('updatePreview', updatePreview); // Sicherheitsnetz für die Vorschau
   }
 
   if (document.readyState === 'loading') {
