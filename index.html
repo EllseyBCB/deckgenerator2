@@ -26,57 +26,11 @@
       <div class="grid grid-colors" id="colorSlots"></div>
 
       <h3>Zahlen 1–13</h3>
-      <div class="mode-toggle">
-        <label><input type="radio" name="numMode" value="sheet" /> Ein Sheet (alle Zahlen auf einem Bild)</label>
-        <label><input type="radio" name="numMode" value="single" /> 13 Einzelbilder</label>
-      </div>
-
-      <div id="sheetMode">
-        <p class="hint">
-          Ein Bild mit allen Zahlen 1–13. Lege das Raster über die Zahlen –
-          Reihenfolge: links → rechts, oben → unten (Zelle 1 = Zahl 1). Das Tool
-          schneidet jede Zahl aus und verteilt sie automatisch auf alle Karten.
-        </p>
-        <div class="sheet-slot" id="sheetSlot"></div>
-        <div class="sheet-controls">
-          <label>Spalten
-            <input type="number" id="sheetCols" min="1" max="13" step="1" />
-          </label>
-          <label>Zeilen
-            <input type="number" id="sheetRows" min="1" max="13" step="1" />
-          </label>
-          <label>Außenrand
-            <input type="range" id="sheetMargin" min="0" max="0.2" step="0.005" />
-            <output id="sheetMarginOut"></output>
-          </label>
-          <label>Abstand
-            <input type="range" id="sheetGap" min="0" max="0.2" step="0.005" />
-            <output id="sheetGapOut"></output>
-          </label>
-          <label class="checkbox">
-            <input type="checkbox" id="sheetTrim" /> Jede Zahl automatisch zuschneiden (empfohlen)
-          </label>
-          <label class="checkbox">
-            <input type="checkbox" id="sheetRemoveBg" /> Einfarbigen Hintergrund transparent machen
-          </label>
-          <label>Toleranz
-            <input type="range" id="sheetBgTol" min="0.02" max="0.5" step="0.01" />
-            <output id="sheetBgTolOut"></output>
-          </label>
-        </div>
-        <div class="sheet-preview-wrap">
-          <canvas id="sheetCanvas"></canvas>
-        </div>
-        <p class="hint" id="sheetStatus"></p>
-      </div>
-
-      <div id="singleMode">
-        <p class="hint">
-          Immer dieselbe Farbe – wird auf jeden Farbhintergrund montiert.
-          Transparenter Hintergrund (PNG) empfohlen.
-        </p>
-        <div class="grid grid-numbers" id="numberSlots"></div>
-      </div>
+      <p class="hint">
+        Immer dieselbe Farbe – wird auf jeden Farbhintergrund montiert.
+        Transparenter Hintergrund (PNG) empfohlen.
+      </p>
+      <div class="grid grid-numbers" id="numberSlots"></div>
 
       <h3>Sonderkarten</h3>
       <p class="hint">Je 1 Bild, wird 4× verwendet (Z1–Z4 / N1–N4). Ohne Zahl.</p>
