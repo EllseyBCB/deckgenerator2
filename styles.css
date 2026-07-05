@@ -108,6 +108,54 @@ body {
 .slot.filled .clear { display: block; }
 .slot .clear:hover { color: var(--err); }
 
+/* Zahlen-Modus */
+.mode-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 4px 0 10px;
+  font-size: 0.85rem;
+}
+.mode-toggle label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+.sheet-slot { margin-bottom: 10px; }
+.sheet-slot .slot { min-height: 96px; }
+.sheet-slot .thumb { height: 72px; }
+
+.sheet-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin-bottom: 10px;
+}
+.sheet-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+.sheet-controls label.checkbox { grid-column: 1 / -1; }
+.sheet-controls input[type=number] {
+  width: 56px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 5px;
+}
+.sheet-controls input[type=range] { flex: 1; }
+.sheet-controls output { min-width: 40px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.sheet-preview-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 6px;
+  background: var(--panel-2);
+  border-radius: 8px;
+}
+.sheet-preview-wrap:empty, #sheetCanvas[width="0"] { display: none; }
+#sheetCanvas { max-width: 100%; height: auto; border-radius: 6px; }
+
 /* Vorschau */
 .preview-controls { margin-bottom: 10px; }
 .preview-controls select { margin-left: 6px; }

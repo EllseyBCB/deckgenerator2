@@ -12,8 +12,13 @@ Internetverbindung nötig. Deine Bilder verlassen deinen Rechner nicht.
 1. `index.html` im Browser öffnen (Doppelklick genügt).
 2. Bilder hochladen (klicken oder per Drag & Drop):
    - **4 Farb-Designs** – je ein Hintergrundbild für Rot / Gelb / Grün / Blau.
-   - **13 Zahlen (1–13)** – immer dieselbe Farbe; werden auf jeden Farbhintergrund
-     montiert. Transparenter Hintergrund (PNG) empfohlen.
+   - **Zahlen 1–13** – zwei Wege (oben umschaltbar):
+     - **Ein Sheet** *(Standard)*: ein einziges Bild mit allen Zahlen 1–13.
+       Du legst ein Raster (Spalten × Zeilen) über die Zahlen; das Tool schneidet
+       jede Zahl aus (Zelle 1 = Zahl 1, links → rechts, oben → unten) und verteilt
+       sie automatisch auf alle Karten. Transparenter Hintergrund empfohlen –
+       einfarbige Hintergründe können automatisch freigestellt werden.
+     - **13 Einzelbilder**: je ein Bild pro Zahl.
    - **Zauberer** (1 Bild) und **Narr** (1 Bild) – werden je 4× verwendet, ohne Zahl.
 3. In der **Live-Vorschau** die Zahl-Anordnung feinjustieren
    (Größe mittig, Ecken, Rand-Abstand, Ausgabe-Breite).

@@ -20,13 +20,23 @@
   // Geladene Bilder als HTMLImageElement (oder null).
   var imgs = {
     colors: { R: null, Y: null, G: null, B: null },
-    numbers: {},                     // 1..13
+    numbers: {},                     // 1..13  (Modus "single": Einzel-Uploads)
+    sheet: null,                     // Modus "sheet": ein Bild mit allen Zahlen
+    sheetSlices: {},                 // 1..13  (aus dem Sheet geschnittene Canvases)
     Z: null,
     N: null
   };
   NUMBERS.forEach(function (n) { imgs.numbers[n] = null; });
 
   var defaults = {
+    numMode: 'sheet',                // 'sheet' | 'single'
+    sheetCols: 13,                   // Rasterspalten im Sheet
+    sheetRows: 1,                    // Rasterzeilen im Sheet
+    sheetMargin: 0,                  // Außenrand (Anteil)
+    sheetGap: 0,                     // Abstand zwischen Zellen (Anteil)
+    sheetTrim: true,                 // jede Zahl per Alpha-Bounding-Box zuschneiden
+    sheetRemoveBg: true,             // einfarbigen Hintergrund transparent machen
+    sheetBgTol: 0.16,               // Toleranz für Hintergrund-Erkennung (0..1)
     centerOn: true,
     centerScale: 0.55,               // Anteil der Kartenhöhe
     centerX: 0,                      // Anteil der Breite
@@ -144,6 +154,13 @@
       });
     });
 
+    makeSlot($('sheetSlot'), {
+      label: 'Zahlen-Sheet (1–13)',
+      sublabel: 'ein Bild mit allen Zahlen',
+      onLoad: function (img) { imgs.sheet = img; sliceSheet(); },
+      onClear: function () { imgs.sheet = null; sliceSheet(); }
+    });
+
     var numberSlots = $('numberSlots');
     NUMBERS.forEach(function (n) {
       makeSlot(numberSlots, {
@@ -197,6 +214,160 @@
     if (letter === 'Z') return { type: 'special', kind: 'Z' };
     if (letter === 'N') return { type: 'special', kind: 'N' };
     return { type: 'number', color: letter, num: parseInt(rest, 10) };
+  }
+
+  // ---- Zahlen-Quelle (Sheet vs. Einzelbilder) ---------------------------
+  function getNumberImage(n) {
+    return settings.numMode === 'sheet'
+      ? (imgs.sheetSlices[n] || null)
+      : (imgs.numbers[n] || null);
+  }
+
+  // Prüft (per Stichprobe), ob das Bild echte Transparenz enthält.
+  function imageHasAlpha(data) {
+    for (var i = 3; i < data.length; i += 4) {
+      if (data[i] < 245) return true;
+    }
+    return false;
+  }
+
+  // Einfarbigen Hintergrund (aus den 4 Ecken gemittelt) auf transparent setzen.
+  function removeBackground(data, w, h, tol) {
+    var corners = [0, (w - 1) * 4, (h - 1) * w * 4, ((h - 1) * w + (w - 1)) * 4];
+    var br = 0, bg = 0, bb = 0;
+    corners.forEach(function (o) { br += data[o]; bg += data[o + 1]; bb += data[o + 2]; });
+    br /= 4; bg /= 4; bb /= 4;
+    var t = tol * 441.673;           // 0..1 -> Distanz im RGB-Würfel (max ≈ 441)
+    var t2 = t * t;
+    for (var i = 0; i < data.length; i += 4) {
+      var dr = data[i] - br, dg = data[i + 1] - bg, db = data[i + 2] - bb;
+      if (dr * dr + dg * dg + db * db <= t2) data[i + 3] = 0;
+    }
+  }
+
+  // Schneidet eine Zelle aus und trimmt sie (per Alpha) auf ihren Inhalt.
+  function trimCell(srcCanvas, sctx, sx, sy, sw, sh, doTrim) {
+    sx = Math.max(0, Math.round(sx));
+    sy = Math.max(0, Math.round(sy));
+    sw = Math.min(Math.round(sw), srcCanvas.width - sx);
+    sh = Math.min(Math.round(sh), srcCanvas.height - sy);
+    if (sw <= 0 || sh <= 0) return null;
+
+    var out = document.createElement('canvas');
+    if (!doTrim) {
+      out.width = sw; out.height = sh;
+      out.getContext('2d').drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+      return out;
+    }
+
+    var d = sctx.getImageData(sx, sy, sw, sh).data;
+    var minX = sw, minY = sh, maxX = -1, maxY = -1;
+    for (var y = 0; y < sh; y++) {
+      for (var x = 0; x < sw; x++) {
+        if (d[(y * sw + x) * 4 + 3] > 20) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) {                  // leere Zelle -> ganze Zelle behalten
+      out.width = sw; out.height = sh;
+      out.getContext('2d').drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+      return out;
+    }
+    var pad = 1;
+    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+    maxX = Math.min(sw - 1, maxX + pad); maxY = Math.min(sh - 1, maxY + pad);
+    var cw = maxX - minX + 1, ch = maxY - minY + 1;
+    out.width = cw; out.height = ch;
+    out.getContext('2d').drawImage(srcCanvas, sx + minX, sy + minY, cw, ch, 0, 0, cw, ch);
+    return out;
+  }
+
+  // Zerlegt das Sheet in bis zu 13 Zahl-Glyphen und zeichnet das Raster-Overlay.
+  function sliceSheet() {
+    imgs.sheetSlices = {};
+    var status = $('sheetStatus');
+    var canvas = $('sheetCanvas');
+
+    if (!imgs.sheet) {
+      if (canvas) { canvas.width = 0; canvas.height = 0; }
+      if (status) status.textContent = '';
+      return;
+    }
+
+    var sImg = imgs.sheet;
+    var iw = sImg.naturalWidth || sImg.width;
+    var ih = sImg.naturalHeight || sImg.height;
+
+    // Sheet auf Arbeits-Canvas, optional Hintergrund entfernen.
+    var work = document.createElement('canvas');
+    work.width = iw; work.height = ih;
+    var wctx = work.getContext('2d');
+    wctx.drawImage(sImg, 0, 0);
+    var full = wctx.getImageData(0, 0, iw, ih);
+    var hadAlpha = imageHasAlpha(full.data);
+    if (settings.sheetRemoveBg && !hadAlpha) {
+      removeBackground(full.data, iw, ih, settings.sheetBgTol);
+      wctx.putImageData(full, 0, 0);
+    }
+
+    var cols = Math.max(1, settings.sheetCols | 0);
+    var rows = Math.max(1, settings.sheetRows | 0);
+    var mX = settings.sheetMargin * iw, mY = settings.sheetMargin * ih;
+    var gX = settings.sheetGap * iw, gY = settings.sheetGap * ih;
+    var cellW = (iw - 2 * mX - gX * (cols - 1)) / cols;
+    var cellH = (ih - 2 * mY - gY * (rows - 1)) / rows;
+
+    var made = 0;
+    for (var idx = 0; idx < cols * rows && idx < 13; idx++) {
+      var cxi = idx % cols, cyi = Math.floor(idx / cols);
+      var x = mX + cxi * (cellW + gX);
+      var y = mY + cyi * (cellH + gY);
+      var cell = trimCell(work, wctx, x, y, cellW, cellH, settings.sheetTrim);
+      if (cell && cell.width > 0 && cell.height > 0) { imgs.sheetSlices[idx + 1] = cell; made++; }
+    }
+
+    drawSheetOverlay(work, iw, ih, cols, rows, mX, mY, gX, gY, cellW, cellH);
+
+    if (status) {
+      status.textContent = made >= 13
+        ? '✓ 13 Zahlen erkannt (Zelle 1–13 → Zahl 1–13).'
+        : '⚠ Nur ' + made + ' von 13 Zellen. Stelle Spalten × Zeilen so ein, dass mindestens 13 Zellen entstehen (z. B. 13×1).';
+    }
+  }
+
+  // Zeichnet das (ggf. freigestellte) Sheet klein mit Rasterlinien + Zellnummern.
+  function drawSheetOverlay(work, iw, ih, cols, rows, mX, mY, gX, gY, cellW, cellH) {
+    var canvas = $('sheetCanvas');
+    if (!canvas) return;
+    var maxW = 360;
+    var scale = Math.min(1, maxW / iw);
+    var dw = Math.max(1, Math.round(iw * scale));
+    var dh = Math.max(1, Math.round(ih * scale));
+    canvas.width = dw; canvas.height = dh;
+    var c = canvas.getContext('2d');
+    c.clearRect(0, 0, dw, dh);
+    c.drawImage(work, 0, 0, dw, dh);
+    c.strokeStyle = 'rgba(124,92,255,0.95)';
+    c.lineWidth = 1.5;
+    c.font = '11px system-ui, sans-serif';
+    c.textBaseline = 'top';
+    for (var idx = 0; idx < cols * rows; idx++) {
+      var cxi = idx % cols, cyi = Math.floor(idx / cols);
+      var x = (mX + cxi * (cellW + gX)) * scale;
+      var y = (mY + cyi * (cellH + gY)) * scale;
+      var w = cellW * scale, h = cellH * scale;
+      c.strokeRect(x, y, w, h);
+      if (idx < 13) {
+        c.fillStyle = 'rgba(18,21,28,0.8)';
+        c.fillRect(x + 2, y + 2, 15, 13);
+        c.fillStyle = '#fff';
+        c.fillText(String(idx + 1), x + 4, y + 3);
+      }
+    }
   }
 
   // ---- Zeichnen ---------------------------------------------------------
@@ -254,16 +425,19 @@
       ctx.fillRect(0, 0, W, H);
     }
 
-    var num = imgs.numbers[spec.num];
+    var num = getNumberImage(spec.num);
     if (!num) {
       // Platzhalter-Zahl, damit die Vorschau auch ohne Upload etwas zeigt.
       drawPlaceholderNumber(ctx, W, H, spec.num);
       return;
     }
 
-    // Mittige Zahl
+    // Mittige Zahl (Breite begrenzen, damit zweistellige Zahlen nicht überlaufen)
     if (settings.centerOn) {
       var targetH = settings.centerScale * H;
+      var niw = num.naturalWidth || num.width, nih = num.naturalHeight || num.height;
+      var maxW = 0.86 * W;
+      if (nih && targetH * (niw / nih) > maxW) targetH = maxW * nih / niw;
       var cx = W / 2 + settings.centerX * W;
       var cy = H / 2 + settings.centerY * H;
       drawGlyph(ctx, num, cx, cy, targetH, 0);
@@ -347,7 +521,68 @@
     });
   }
 
+  // Range-Regler, die ein Neu-Slicen des Sheets auslösen.
+  function bindSheetRange(id, key, fmt) {
+    var el = $(id), out = $(id + 'Out');
+    el.value = settings[key];
+    if (out) out.textContent = fmt(settings[key]);
+    el.addEventListener('input', function () {
+      settings[key] = parseFloat(el.value);
+      if (out) out.textContent = fmt(settings[key]);
+      saveSettings();
+      sliceSheet();
+      updatePreview();
+      updateValidation();
+    });
+  }
+
+  function bindSheetInt(id, key) {
+    var el = $(id);
+    el.value = settings[key];
+    el.addEventListener('change', function () {
+      var v = Math.max(1, Math.min(13, parseInt(el.value, 10) || 1));
+      settings[key] = v;
+      el.value = v;
+      saveSettings();
+      sliceSheet();
+      refreshAll();
+    });
+  }
+
+  function bindSheetCheck(id, key) {
+    var el = $(id);
+    el.checked = settings[key];
+    el.addEventListener('change', function () {
+      settings[key] = el.checked;
+      saveSettings();
+      sliceSheet();
+      refreshAll();
+    });
+  }
+
+  function applyNumMode() {
+    var sheetOn = settings.numMode === 'sheet';
+    $('sheetMode').style.display = sheetOn ? '' : 'none';
+    $('singleMode').style.display = sheetOn ? 'none' : '';
+    Array.prototype.forEach.call(document.getElementsByName('numMode'), function (r) {
+      r.checked = (r.value === settings.numMode);
+    });
+  }
+
   function bindControls() {
+    Array.prototype.forEach.call(document.getElementsByName('numMode'), function (r) {
+      r.addEventListener('change', function () {
+        if (r.checked) { settings.numMode = r.value; saveSettings(); applyNumMode(); refreshAll(); }
+      });
+    });
+    bindSheetInt('sheetCols', 'sheetCols');
+    bindSheetInt('sheetRows', 'sheetRows');
+    bindSheetRange('sheetMargin', 'sheetMargin', pct);
+    bindSheetRange('sheetGap', 'sheetGap', pct);
+    bindSheetRange('sheetBgTol', 'sheetBgTol', pct);
+    bindSheetCheck('sheetTrim', 'sheetTrim');
+    bindSheetCheck('sheetRemoveBg', 'sheetRemoveBg');
+
     bindRange('centerScale', 'centerScale', pct);
     bindRange('centerX', 'centerX', pct);
     bindRange('centerY', 'centerY', pct);
@@ -388,6 +623,7 @@
       settings = JSON.parse(JSON.stringify(defaults));
       saveSettings();
       syncControlsFromSettings();
+      sliceSheet();
       refreshAll();
     });
 
@@ -395,14 +631,21 @@
   }
 
   function syncControlsFromSettings() {
-    ['centerScale','centerX','centerY','cornerScale','cornerInset'].forEach(function (k) {
+    ['centerScale','centerX','centerY','cornerScale','cornerInset',
+     'sheetMargin','sheetGap','sheetBgTol'].forEach(function (k) {
       var el = $(k); var out = $(k + 'Out');
+      if (!el) return;
       el.value = settings[k]; if (out) out.textContent = pct(settings[k]);
     });
+    $('sheetCols').value = settings.sheetCols;
+    $('sheetRows').value = settings.sheetRows;
+    $('sheetTrim').checked = settings.sheetTrim;
+    $('sheetRemoveBg').checked = settings.sheetRemoveBg;
     $('centerOn').checked = settings.centerOn;
     $('cornerMode').value = String(settings.cornerMode);
     $('cornerRotate').checked = settings.cornerRotate;
     $('outWidth').value = settings.outWidth;
+    applyNumMode();
   }
 
   function updateOutSizeNote() {
@@ -437,8 +680,14 @@
     COLORS.forEach(function (c) {
       if (!imgs.colors[c.key]) missing.push('Farbe ' + c.name);
     });
-    var missingNums = NUMBERS.filter(function (n) { return !imgs.numbers[n]; });
-    if (missingNums.length) missing.push('Zahl(en): ' + missingNums.join(', '));
+    if (settings.numMode === 'sheet') {
+      var got = NUMBERS.filter(function (n) { return imgs.sheetSlices[n]; }).length;
+      if (!imgs.sheet) missing.push('Zahlen-Sheet');
+      else if (got < 13) missing.push('Zahlen-Sheet: nur ' + got + '/13 Zellen (Raster anpassen)');
+    } else {
+      var missingNums = NUMBERS.filter(function (n) { return !imgs.numbers[n]; });
+      if (missingNums.length) missing.push('Zahl(en): ' + missingNums.join(', '));
+    }
     if (!imgs.Z) missing.push('Zauberer');
     if (!imgs.N) missing.push('Narr');
     return missing;
@@ -666,6 +915,8 @@
     deckCardIds: deckCardIds,
     renderCard: renderCard,
     outHeightFor: outHeightFor,
+    sliceSheet: sliceSheet,
+    sliceCount: function () { return Object.keys(imgs.sheetSlices).length; },
     settings: function () { return settings; }
   };
 })();
