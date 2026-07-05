@@ -38,7 +38,7 @@
     outWidth: 660
   };
   NUMBERS.forEach(function (n) { defaults.cornerScalePer[n] = 0.15; });
-  ['R','Y','G','B','Z','N'].forEach(function (k) { defaults.imgFit[k] = { scale: 1, ox: 0, oy: 0 }; });
+  ['R','Y','G','B','Z','N'].forEach(function (k) { defaults.imgFit[k] = { scaleX: 1, scaleY: 1, ox: 0, oy: 0 }; });
   var settings = loadSettings();
 
   // ---- DOM Refs ---------------------------------------------------------
@@ -222,8 +222,11 @@
   }
 
   function fitFor(key) {
-    var f = settings.imgFit && settings.imgFit[key];
-    return (f && typeof f.scale === 'number') ? f : { scale: 1, ox: 0, oy: 0 };
+    var f = (settings.imgFit && settings.imgFit[key]) || {};
+    // Abwärtskompatibel: altes einzelnes "scale" -> Breite & Höhe gleich.
+    var sx = (typeof f.scaleX === 'number') ? f.scaleX : (typeof f.scale === 'number' ? f.scale : 1);
+    var sy = (typeof f.scaleY === 'number') ? f.scaleY : (typeof f.scale === 'number' ? f.scale : 1);
+    return { scaleX: sx, scaleY: sy, ox: f.ox || 0, oy: f.oy || 0 };
   }
 
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
@@ -235,16 +238,22 @@
     var iw = img.naturalWidth || img.width;
     var ih = img.naturalHeight || img.height;
     if (!iw || !ih) return;
-    var z = (fit && fit.scale > 1) ? fit.scale : 1;   // nur vergrößern (>=1) -> nie Rand
-    var ox = fit ? (fit.ox || 0) : 0;
-    var oy = fit ? (fit.oy || 0) : 0;
-    var base = Math.max(dw / iw, dh / ih);             // Cover-Fill
-    var sw = (dw / base) / z;                          // Quell-Ausschnitt (mit Zoom kleiner)
-    var sh = (dh / base) / z;
-    var slackX = iw - sw, slackY = ih - sh;
-    var sx = clamp(slackX / 2 * (1 + clamp(ox, -1, 1)), 0, Math.max(0, slackX));
-    var sy = clamp(slackY / 2 * (1 + clamp(oy, -1, 1)), 0, Math.max(0, slackY));
-    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+    var f = fit || {};
+    var sx = f.scaleX || 1, sy = f.scaleY || 1;        // Breite/Höhe getrennt
+    var ox = f.ox || 0, oy = f.oy || 0;
+    var cover = Math.max(dw / iw, dh / ih);             // Basis: randfüllend (100 %)
+    var destW = iw * cover * sx;                        // Zielgröße auf der Karte
+    var destH = ih * cover * sy;
+    var destX = dx + (dw - destW) / 2 + ox * dw / 2;    // zentriert + Verschiebung
+    var destY = dy + (dh - destH) / 2 + oy * dh / 2;
+    // Auf die Kartenfläche beschneiden (Überstand wird abgeschnitten,
+    // bei Verkleinerung bleiben die Ränder transparent).
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(dx, dy, dw, dh);
+    ctx.clip();
+    ctx.drawImage(img, destX, destY, destW, destH);
+    ctx.restore();
   }
 
   // Glyph (Zahl) mittig auf (cx,cy) mit Zielhöhe targetH, Seitenverhältnis erhalten.
@@ -366,8 +375,9 @@
   function syncFitControls() {
     var key = currentDesignKey();
     var f = fitFor(key);
-    var z = $('fitZoom'), fx = $('fitX'), fy = $('fitY'), tag = $('fitFor');
-    if (z) { z.value = f.scale; var zo = $('fitZoomOut'); if (zo) zo.textContent = Math.round(f.scale * 100) + '%'; }
+    var w = $('fitW'), h = $('fitH'), fx = $('fitX'), fy = $('fitY'), tag = $('fitFor');
+    if (w) { w.value = f.scaleX; var wo = $('fitWOut'); if (wo) wo.textContent = Math.round(f.scaleX * 100) + '%'; }
+    if (h) { h.value = f.scaleY; var ho = $('fitHOut'); if (ho) ho.textContent = Math.round(f.scaleY * 100) + '%'; }
     if (fx) fx.value = f.ox;
     if (fy) fy.value = f.oy;
     if (tag) {
@@ -442,17 +452,22 @@
       updatePreview();
     });
 
-    // ---- Bild-Anpassung (Zoom/Ziehen) pro Motiv ----
+    // ---- Bild-Anpassung (Breite/Höhe/Ziehen) pro Motiv ----
     function setFit(prop, val) {
       var key = currentDesignKey();
       if (!settings.imgFit) settings.imgFit = {};
-      if (!settings.imgFit[key]) settings.imgFit[key] = { scale: 1, ox: 0, oy: 0 };
+      if (!settings.imgFit[key]) settings.imgFit[key] = { scaleX: 1, scaleY: 1, ox: 0, oy: 0 };
       settings.imgFit[key][prop] = val;
     }
-    var fitZoom = $('fitZoom'), fitX = $('fitX'), fitY = $('fitY');
-    if (fitZoom) fitZoom.addEventListener('input', function () {
-      setFit('scale', clamp(parseFloat(fitZoom.value), 1, 4));
-      var zo = $('fitZoomOut'); if (zo) zo.textContent = Math.round(fitFor(currentDesignKey()).scale * 100) + '%';
+    var fitW = $('fitW'), fitH = $('fitH'), fitX = $('fitX'), fitY = $('fitY');
+    if (fitW) fitW.addEventListener('input', function () {
+      setFit('scaleX', clamp(parseFloat(fitW.value), 0.5, 3));
+      var o = $('fitWOut'); if (o) o.textContent = Math.round(fitFor(currentDesignKey()).scaleX * 100) + '%';
+      saveSettings(); updatePreview();
+    });
+    if (fitH) fitH.addEventListener('input', function () {
+      setFit('scaleY', clamp(parseFloat(fitH.value), 0.5, 3));
+      var o = $('fitHOut'); if (o) o.textContent = Math.round(fitFor(currentDesignKey()).scaleY * 100) + '%';
       saveSettings(); updatePreview();
     });
     if (fitX) fitX.addEventListener('input', function () { setFit('ox', clamp(parseFloat(fitX.value), -1, 1)); saveSettings(); updatePreview(); });
@@ -460,7 +475,7 @@
     var fitReset = $('fitReset');
     if (fitReset) fitReset.addEventListener('click', function () {
       if (!settings.imgFit) settings.imgFit = {};
-      settings.imgFit[currentDesignKey()] = { scale: 1, ox: 0, oy: 0 };
+      settings.imgFit[currentDesignKey()] = { scaleX: 1, scaleY: 1, ox: 0, oy: 0 };
       saveSettings(); updatePreview();
     });
 
@@ -494,7 +509,9 @@
       previewCanvas.addEventListener('wheel', function (e) {
         e.preventDefault();
         var f = fitFor(currentDesignKey());
-        setFit('scale', clamp((f.scale || 1) + (e.deltaY < 0 ? 0.1 : -0.1), 1, 4));
+        var d = (e.deltaY < 0 ? 0.05 : -0.05);       // Mausrad zoomt Breite+Höhe zusammen
+        setFit('scaleX', clamp(f.scaleX + d, 0.5, 3));
+        setFit('scaleY', clamp(f.scaleY + d, 0.5, 3));
         saveSettings(); updatePreview();
       }, { passive: false });
     }

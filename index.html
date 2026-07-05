@@ -49,7 +49,7 @@
       <div class="preview-stage">
         <canvas id="previewCanvas" width="330" height="500"></canvas>
       </div>
-      <p class="hint">🖱️ Bild in der Vorschau ziehen oder mit dem Mausrad zoomen, um es in den Rahmen einzupassen.</p>
+      <p class="hint">🖱️ Bild in der Vorschau ziehen oder mit dem Mausrad zoomen. Breite &amp; Höhe getrennt rechts einstellbar.</p>
       <p class="hint" id="previewNote"></p>
     </section>
 
@@ -101,14 +101,21 @@
       </fieldset>
 
       <fieldset>
-        <legend>Bild anpassen (ziehen / zoomen)</legend>
+        <legend>Bild anpassen (Breite / Höhe / ziehen)</legend>
         <p class="hint">
-          Ziehe das Bild direkt in der Vorschau an die richtige Stelle oder zoome
-          mit dem Mausrad größer. Gilt fürs aktuell gewählte Motiv.
+          <strong>Breite</strong> und <strong>Höhe</strong> lassen sich getrennt
+          einstellen (100 % = randfüllend). Ziehe das Bild in der Vorschau an die
+          richtige Stelle. Gilt fürs aktuell gewählte Motiv
+          <span id="fitFor" class="for-tag"></span>.
+          Hinweis: unter 100 % kann ein transparenter Rand entstehen.
         </p>
-        <label>Zoom <span id="fitFor" class="for-tag"></span>
-          <input type="range" id="fitZoom" min="1" max="4" step="0.05" />
-          <output id="fitZoomOut"></output>
+        <label>Breite
+          <input type="range" id="fitW" min="0.5" max="3" step="0.02" />
+          <output id="fitWOut"></output>
+        </label>
+        <label>Höhe
+          <input type="range" id="fitH" min="0.5" max="3" step="0.02" />
+          <output id="fitHOut"></output>
         </label>
         <label>Verschieben X
           <input type="range" id="fitX" min="-1" max="1" step="0.02" />
@@ -147,9 +154,9 @@
       Format je Karte: PNG · exakt 33:50 · Rahmen randlos an allen Kanten ·
       Dateien: R1–R13, Y1–Y13, G1–G13, B1–B13, Z1–Z4, N1–N4 · keine back.png
     </p>
-    <p>Version <strong id="appVersion">10</strong> · mit Zoom &amp; Ziehen der Motive</p>
+    <p>Version <strong id="appVersion">11</strong> · Breite &amp; Höhe getrennt einstellbar</p>
   </footer>
 
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
