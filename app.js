@@ -33,7 +33,9 @@
     centerY: 0,                      // Anteil der Höhe
     cornerMode: 4,                   // 0 | 2 | 4
     cornerScalePer: {},              // Ecken-Größe pro Zahl 1..13 (unten gefüllt)
-    cornerInset: 0.05,
+    cornerInsetTop: 0.04,            // Abstand der oberen Ecken vom oberen Rand (Anteil H)
+    cornerInsetBottom: 0.04,         // Abstand der unteren Ecken vom unteren Rand (Anteil H)
+    cornerInsetSide: 0.05,           // seitlicher Abstand aller Ecken (außen↔innen, Anteil W)
     imgFit: {},                      // Bild-Anpassung pro Motiv R/Y/G/B/Z/N (unten gefüllt)
     outWidth: 660
   };
@@ -315,14 +317,15 @@
     if (settings.cornerMode === 2 || settings.cornerMode === 4) {
       var ch = cornerScaleFor(spec.num) * H;
       var cw = ch * ((num.naturalWidth || num.width) / (num.naturalHeight || num.height));
-      var insetX = settings.cornerInset * W;
-      var insetY = settings.cornerInset * W; // gleicher px-Abstand oben/unten wie seitlich
+      var insetSide = settings.cornerInsetSide * W;    // seitlicher Abstand (außen↔innen)
+      var insetTop = settings.cornerInsetTop * H;      // Abstand obere Ecken vom oberen Rand
+      var insetBottom = settings.cornerInsetBottom * H;// Abstand untere Ecken vom unteren Rand
 
       // Alle Ecken-Zahlen stehen aufrecht (nie kopfüber).
-      var tl = { x: insetX + cw / 2, y: insetY + ch / 2 };
-      var br = { x: W - insetX - cw / 2, y: H - insetY - ch / 2 };
-      var tr = { x: W - insetX - cw / 2, y: insetY + ch / 2 };
-      var bl = { x: insetX + cw / 2, y: H - insetY - ch / 2 };
+      var tl = { x: insetSide + cw / 2, y: insetTop + ch / 2 };
+      var br = { x: W - insetSide - cw / 2, y: H - insetBottom - ch / 2 };
+      var tr = { x: W - insetSide - cw / 2, y: insetTop + ch / 2 };
+      var bl = { x: insetSide + cw / 2, y: H - insetBottom - ch / 2 };
 
       var corners = settings.cornerMode === 2 ? [tl, br] : [tl, tr, bl, br];
       corners.forEach(function (p) { drawGlyph(ctx, num, p.x, p.y, ch, 0); });
@@ -428,7 +431,9 @@
     bindRange('centerScale', 'centerScale', pct);
     bindRange('centerX', 'centerX', pct);
     bindRange('centerY', 'centerY', pct);
-    bindRange('cornerInset', 'cornerInset', pct);
+    bindRange('cornerInsetTop', 'cornerInsetTop', pct);
+    bindRange('cornerInsetBottom', 'cornerInsetBottom', pct);
+    bindRange('cornerInsetSide', 'cornerInsetSide', pct);
 
     // Ecken-Größe: gilt pro Zahl (die in der Vorschau gewählte).
     var cornerScaleEl = $('cornerScale'), cornerScaleOut = $('cornerScaleOut');
@@ -551,7 +556,7 @@
   }
 
   function syncControlsFromSettings() {
-    ['centerScale','centerX','centerY','cornerInset'].forEach(function (k) {
+    ['centerScale','centerX','centerY','cornerInsetTop','cornerInsetBottom','cornerInsetSide'].forEach(function (k) {
       var el = $(k); var out = $(k + 'Out');
       if (el) el.value = settings[k];
       if (out) out.textContent = pct(settings[k]);

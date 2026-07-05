@@ -94,9 +94,18 @@
           <output id="cornerScaleOut"></output>
         </label>
         <button type="button" id="cornerApplyAll" class="secondary small">Diese Größe für alle Zahlen übernehmen</button>
-        <label>Rand-Abstand
-          <input type="range" id="cornerInset" min="0" max="0.2" step="0.005" />
-          <output id="cornerInsetOut"></output>
+        <p class="hint">Position der Ecken-Zahlen (gilt für alle Zahlen):</p>
+        <label>Abstand oben
+          <input type="range" id="cornerInsetTop" min="0" max="0.3" step="0.005" />
+          <output id="cornerInsetTopOut"></output>
+        </label>
+        <label>Abstand unten
+          <input type="range" id="cornerInsetBottom" min="0" max="0.3" step="0.005" />
+          <output id="cornerInsetBottomOut"></output>
+        </label>
+        <label>Abstand seitlich (außen ↔ innen)
+          <input type="range" id="cornerInsetSide" min="0" max="0.3" step="0.005" />
+          <output id="cornerInsetSideOut"></output>
         </label>
       </fieldset>
 
@@ -154,9 +163,9 @@
       Format je Karte: PNG · exakt 33:50 · Rahmen randlos an allen Kanten ·
       Dateien: R1–R13, Y1–Y13, G1–G13, B1–B13, Z1–Z4, N1–N4 · keine back.png
     </p>
-    <p>Version <strong id="appVersion">11</strong> · Breite &amp; Höhe getrennt einstellbar</p>
+    <p>Version <strong id="appVersion">12</strong> · Ecken-Position (oben/unten/seitlich) einstellbar</p>
   </footer>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
