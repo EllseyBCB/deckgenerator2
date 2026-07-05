@@ -49,6 +49,7 @@
       <div class="preview-stage">
         <canvas id="previewCanvas" width="330" height="500"></canvas>
       </div>
+      <p class="hint">🖱️ Bild in der Vorschau ziehen oder mit dem Mausrad zoomen, um es in den Rahmen einzupassen.</p>
       <p class="hint" id="previewNote"></p>
     </section>
 
@@ -100,6 +101,25 @@
       </fieldset>
 
       <fieldset>
+        <legend>Bild anpassen (ziehen / zoomen)</legend>
+        <p class="hint">
+          Ziehe das Bild direkt in der Vorschau an die richtige Stelle oder zoome
+          mit dem Mausrad größer. Gilt fürs aktuell gewählte Motiv.
+        </p>
+        <label>Zoom <span id="fitFor" class="for-tag"></span>
+          <input type="range" id="fitZoom" min="1" max="4" step="0.05" />
+          <output id="fitZoomOut"></output>
+        </label>
+        <label>Verschieben X
+          <input type="range" id="fitX" min="-1" max="1" step="0.02" />
+        </label>
+        <label>Verschieben Y
+          <input type="range" id="fitY" min="-1" max="1" step="0.02" />
+        </label>
+        <button type="button" id="fitReset" class="secondary small">Bild-Anpassung zurücksetzen</button>
+      </fieldset>
+
+      <fieldset>
         <legend>Ausgabe</legend>
         <label>Breite (px)
           <input type="number" id="outWidth" min="132" max="1320" step="1" />
@@ -129,6 +149,6 @@
     </p>
   </footer>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

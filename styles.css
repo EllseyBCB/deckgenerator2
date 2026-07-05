@@ -136,6 +136,8 @@ body {
   max-width: 100%;
   height: auto;
   border-radius: 6px;
+  cursor: grab;
+  touch-action: none;
   box-shadow: 0 6px 22px rgba(0,0,0,.4);
   background:
     linear-gradient(45deg, #2b3140 25%, transparent 25%) 0 0/16px 16px,
@@ -191,6 +193,7 @@ button.secondary:hover { border-color: var(--accent-2); }
 .settings button.small { padding: 5px 10px; font-size: 0.8rem; margin: -2px 0 12px; }
 .for-tag { color: var(--accent-2); font-weight: 600; font-size: 0.8rem; }
 input[type=range]:disabled { opacity: .4; }
+#previewCanvas.grabbing { cursor: grabbing; }
 
 /* Generieren */
 .generate {

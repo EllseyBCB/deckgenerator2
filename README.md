@@ -16,7 +16,9 @@ Internetverbindung nötig. Deine Bilder verlassen deinen Rechner nicht.
      montiert. Transparenter Hintergrund (PNG) empfohlen.
    - **Zauberer** (1 Bild) und **Narr** (1 Bild) – werden je 4× verwendet, ohne Zahl.
 3. In der **Live-Vorschau** die Zahl-Anordnung feinjustieren
-   (Größe mittig, Ecken, Rand-Abstand, Ausgabe-Breite).
+   (Größe mittig, Ecken pro Zahl, Rand-Abstand, Ausgabe-Breite). Das
+   Hintergrundbild kannst du direkt in der Vorschau **ziehen** oder mit dem
+   **Mausrad zoomen**, damit es genau in den Rahmen passt (pro Motiv).
 4. **„Deck generieren (60 Karten) → ZIP"** klicken → `wizard-deck.zip` wird
    heruntergeladen.
 

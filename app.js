@@ -34,9 +34,11 @@
     cornerMode: 4,                   // 0 | 2 | 4
     cornerScalePer: {},              // Ecken-Größe pro Zahl 1..13 (unten gefüllt)
     cornerInset: 0.05,
+    imgFit: {},                      // Bild-Anpassung pro Motiv R/Y/G/B/Z/N (unten gefüllt)
     outWidth: 660
   };
   NUMBERS.forEach(function (n) { defaults.cornerScalePer[n] = 0.15; });
+  ['R','Y','G','B','Z','N'].forEach(function (k) { defaults.imgFit[k] = { scale: 1, ox: 0, oy: 0 }; });
   var settings = loadSettings();
 
   // ---- DOM Refs ---------------------------------------------------------
@@ -213,18 +215,35 @@
     return spec.type === 'number' ? spec.num : null;
   }
 
+  // Motiv-Schlüssel der aktuellen Karte (Farbe R/Y/G/B bzw. Z/N).
+  function currentDesignKey() {
+    var spec = parseCardId(previewSelect.value || 'R7');
+    return spec.type === 'special' ? spec.kind : spec.color;
+  }
+
+  function fitFor(key) {
+    var f = settings.imgFit && settings.imgFit[key];
+    return (f && typeof f.scale === 'number') ? f : { scale: 1, ox: 0, oy: 0 };
+  }
+
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
   // ---- Zeichnen ---------------------------------------------------------
   // "cover": Bild mittig so skalieren/zuschneiden, dass es dw×dh KOMPLETT füllt
   // (kein Rand). Garantiert Design an allen 4 Kanten.
-  function drawCover(ctx, img, dx, dy, dw, dh) {
+  function drawCover(ctx, img, dx, dy, dw, dh, fit) {
     var iw = img.naturalWidth || img.width;
     var ih = img.naturalHeight || img.height;
     if (!iw || !ih) return;
-    var scale = Math.max(dw / iw, dh / ih);
-    var sw = dw / scale;             // Quell-Ausschnitt
-    var sh = dh / scale;
-    var sx = (iw - sw) / 2;
-    var sy = (ih - sh) / 2;
+    var z = (fit && fit.scale > 1) ? fit.scale : 1;   // nur vergrößern (>=1) -> nie Rand
+    var ox = fit ? (fit.ox || 0) : 0;
+    var oy = fit ? (fit.oy || 0) : 0;
+    var base = Math.max(dw / iw, dh / ih);             // Cover-Fill
+    var sw = (dw / base) / z;                          // Quell-Ausschnitt (mit Zoom kleiner)
+    var sh = (dh / base) / z;
+    var slackX = iw - sw, slackY = ih - sh;
+    var sx = clamp(slackX / 2 * (1 + clamp(ox, -1, 1)), 0, Math.max(0, slackX));
+    var sy = clamp(slackY / 2 * (1 + clamp(oy, -1, 1)), 0, Math.max(0, slackY));
     ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
   }
 
@@ -254,14 +273,14 @@
 
     if (spec.type === 'special') {
       var simg = spec.kind === 'Z' ? imgs.Z : imgs.N;
-      if (simg) drawCover(ctx, simg, 0, 0, W, H);
+      if (simg) drawCover(ctx, simg, 0, 0, W, H, fitFor(spec.kind));
       else drawMissingBg(ctx, W, H, spec.kind === 'Z' ? 'Zauberer fehlt' : 'Narr fehlt');
       return;
     }
 
     // Zahlkarte: Farbhintergrund + Zahl
     var bg = imgs.colors[spec.color];
-    if (bg) drawCover(ctx, bg, 0, 0, W, H);
+    if (bg) drawCover(ctx, bg, 0, 0, W, H, fitFor(spec.color));
     else {
       var col = COLORS.filter(function (c) { return c.key === spec.color; })[0];
       ctx.fillStyle = col ? col.css : '#444';
@@ -340,6 +359,21 @@
       previewNote.textContent = 'Dateiname: ' + spec.color + spec.num + '.png';
     }
     syncCornerScaleControl();
+    syncFitControls();
+  }
+
+  // Bild-Anpassungs-Regler (Zoom/X/Y) auf das aktuelle Motiv spiegeln.
+  function syncFitControls() {
+    var key = currentDesignKey();
+    var f = fitFor(key);
+    var z = $('fitZoom'), fx = $('fitX'), fy = $('fitY'), tag = $('fitFor');
+    if (z) { z.value = f.scale; var zo = $('fitZoomOut'); if (zo) zo.textContent = Math.round(f.scale * 100) + '%'; }
+    if (fx) fx.value = f.ox;
+    if (fy) fy.value = f.oy;
+    if (tag) {
+      var names = { R: 'Rot', Y: 'Gelb', G: 'Grün', B: 'Blau', Z: 'Zauberer', N: 'Narr' };
+      tag.textContent = '(' + (names[key] || key) + ')';
+    }
   }
 
   // Ecken-Größe-Regler auf die aktuell gewählte Zahl spiegeln.
@@ -407,6 +441,63 @@
       saveSettings();
       updatePreview();
     });
+
+    // ---- Bild-Anpassung (Zoom/Ziehen) pro Motiv ----
+    function setFit(prop, val) {
+      var key = currentDesignKey();
+      if (!settings.imgFit) settings.imgFit = {};
+      if (!settings.imgFit[key]) settings.imgFit[key] = { scale: 1, ox: 0, oy: 0 };
+      settings.imgFit[key][prop] = val;
+    }
+    var fitZoom = $('fitZoom'), fitX = $('fitX'), fitY = $('fitY');
+    if (fitZoom) fitZoom.addEventListener('input', function () {
+      setFit('scale', clamp(parseFloat(fitZoom.value), 1, 4));
+      var zo = $('fitZoomOut'); if (zo) zo.textContent = Math.round(fitFor(currentDesignKey()).scale * 100) + '%';
+      saveSettings(); updatePreview();
+    });
+    if (fitX) fitX.addEventListener('input', function () { setFit('ox', clamp(parseFloat(fitX.value), -1, 1)); saveSettings(); updatePreview(); });
+    if (fitY) fitY.addEventListener('input', function () { setFit('oy', clamp(parseFloat(fitY.value), -1, 1)); saveSettings(); updatePreview(); });
+    var fitReset = $('fitReset');
+    if (fitReset) fitReset.addEventListener('click', function () {
+      if (!settings.imgFit) settings.imgFit = {};
+      settings.imgFit[currentDesignKey()] = { scale: 1, ox: 0, oy: 0 };
+      saveSettings(); updatePreview();
+    });
+
+    // Ziehen + Mausrad-Zoom direkt auf der Vorschau.
+    if (previewCanvas) {
+      var dragging = false, lastX = 0, lastY = 0;
+      previewCanvas.addEventListener('pointerdown', function (e) {
+        dragging = true; lastX = e.clientX; lastY = e.clientY;
+        try { previewCanvas.setPointerCapture(e.pointerId); } catch (x) {}
+        previewCanvas.classList.add('grabbing');
+      });
+      previewCanvas.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        var rect = previewCanvas.getBoundingClientRect();
+        var fdx = (e.clientX - lastX) / rect.width;
+        var fdy = (e.clientY - lastY) / rect.height;
+        lastX = e.clientX; lastY = e.clientY;
+        var f = fitFor(currentDesignKey());
+        setFit('ox', clamp((f.ox || 0) - fdx * 2, -1, 1)); // Bild folgt dem Cursor
+        setFit('oy', clamp((f.oy || 0) - fdy * 2, -1, 1));
+        updatePreview();
+      });
+      var endDrag = function (e) {
+        if (!dragging) return;
+        dragging = false; previewCanvas.classList.remove('grabbing');
+        try { previewCanvas.releasePointerCapture(e.pointerId); } catch (x) {}
+        saveSettings();
+      };
+      previewCanvas.addEventListener('pointerup', endDrag);
+      previewCanvas.addEventListener('pointercancel', endDrag);
+      previewCanvas.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        var f = fitFor(currentDesignKey());
+        setFit('scale', clamp((f.scale || 1) + (e.deltaY < 0 ? 0.1 : -0.1), 1, 4));
+        saveSettings(); updatePreview();
+      }, { passive: false });
+    }
 
     var centerOn = $('centerOn');
     centerOn.checked = settings.centerOn;
