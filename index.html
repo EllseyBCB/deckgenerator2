@@ -56,6 +56,15 @@
     <!-- Rechte Spalte: Einstellungen -->
     <section class="panel settings">
       <h2>3 · Einstellungen</h2>
+      <p class="hint card-scope">
+        Die Zahl-Einstellungen gelten <strong>nur für die gewählte Karte</strong>:
+        <strong id="layoutForCard" class="for-tag"></strong>. Oben in der Vorschau
+        die Karte wechseln, um eine andere einzustellen.
+      </p>
+      <div class="layout-actions">
+        <button type="button" id="layoutApplyAll" class="secondary small">Auf alle Karten übernehmen</button>
+        <button type="button" id="layoutResetCard" class="secondary small">Nur diese Karte zurücksetzen</button>
+      </div>
 
       <fieldset>
         <legend>Zahl mittig (groß)</legend>
@@ -85,16 +94,11 @@
             <option value="4">Alle 4 Ecken</option>
           </select>
         </label>
-        <p class="hint">
-          Die Ecken-Größe gilt pro Zahl. Wähle oben in der Vorschau eine Zahl und
-          stelle deren Ecken-Größe hier ein.
-        </p>
-        <label>Größe <span id="cornerScaleFor" class="for-tag"></span>
+        <label>Größe
           <input type="range" id="cornerScale" min="0.03" max="0.35" step="0.005" />
           <output id="cornerScaleOut"></output>
         </label>
-        <button type="button" id="cornerApplyAll" class="secondary small">Diese Größe für alle Zahlen übernehmen</button>
-        <p class="hint">Position der Ecken-Zahlen (gilt für alle Zahlen):</p>
+        <p class="hint">Position der Ecken-Zahlen:</p>
         <label>Abstand oben
           <input type="range" id="cornerInsetTop" min="-0.2" max="0.45" step="0.005" />
           <output id="cornerInsetTopOut"></output>
@@ -163,9 +167,9 @@
       Format je Karte: PNG · exakt 33:50 · Rahmen randlos an allen Kanten ·
       Dateien: R1–R13, Y1–Y13, G1–G13, B1–B13, Z1–Z4, N1–N4 · keine back.png
     </p>
-    <p>Version <strong id="appVersion">13</strong> · größerer Verschiebe-Bereich (auch über den Rand)</p>
+    <p>Version <strong id="appVersion">14</strong> · Zahl-Positionen pro Karte einzeln</p>
   </footer>
 
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>

@@ -32,14 +32,14 @@
     centerX: 0,                      // Anteil der Breite
     centerY: 0,                      // Anteil der Höhe
     cornerMode: 4,                   // 0 | 2 | 4
-    cornerScalePer: {},              // Ecken-Größe pro Zahl 1..13 (unten gefüllt)
+    cornerScale: 0.15,               // Basis-Ecken-Größe (pro Karte überschreibbar)
     cornerInsetTop: 0.04,            // Abstand der oberen Ecken vom oberen Rand (Anteil H)
     cornerInsetBottom: 0.04,         // Abstand der unteren Ecken vom unteren Rand (Anteil H)
     cornerInsetSide: 0.05,           // seitlicher Abstand aller Ecken (außen↔innen, Anteil W)
+    cardLayout: {},                  // Pro-Karte-Overrides der Zahl-Positionen (id -> {prop:val})
     imgFit: {},                      // Bild-Anpassung pro Motiv R/Y/G/B/Z/N (unten gefüllt)
     outWidth: 660
   };
-  NUMBERS.forEach(function (n) { defaults.cornerScalePer[n] = 0.15; });
   ['R','Y','G','B','Z','N'].forEach(function (k) { defaults.imgFit[k] = { scaleX: 1, scaleY: 1, ox: 0, oy: 0 }; });
   var settings = loadSettings();
 
@@ -205,16 +205,32 @@
     return { type: 'number', color: letter, num: parseInt(rest, 10) };
   }
 
-  // Ecken-Größe (Anteil der Kartenhöhe) für eine bestimmte Zahl.
-  function cornerScaleFor(n) {
-    var p = settings.cornerScalePer;
-    return (p && typeof p[n] === 'number') ? p[n] : 0.15;
+  // ID der aktuell in der Vorschau gewählten Karte (z. B. "R7").
+  function currentCardId() { return previewSelect.value || 'R7'; }
+
+  // Zahl-Layout einer Karte: Pro-Karte-Override über globalem Basiswert.
+  function layoutFor(id) {
+    var o = (settings.cardLayout && settings.cardLayout[id]) || {};
+    function g(p, base) { return (o[p] !== undefined && o[p] !== null) ? o[p] : base; }
+    return {
+      centerOn: g('centerOn', settings.centerOn),
+      centerScale: g('centerScale', settings.centerScale),
+      centerX: g('centerX', settings.centerX),
+      centerY: g('centerY', settings.centerY),
+      cornerMode: g('cornerMode', settings.cornerMode),
+      cornerScale: g('cornerScale', settings.cornerScale),
+      cornerInsetTop: g('cornerInsetTop', settings.cornerInsetTop),
+      cornerInsetBottom: g('cornerInsetBottom', settings.cornerInsetBottom),
+      cornerInsetSide: g('cornerInsetSide', settings.cornerInsetSide)
+    };
   }
 
-  // Zahl der aktuell in der Vorschau gewählten Karte (null bei Zauberer/Narr).
-  function currentPreviewNum() {
-    var spec = parseCardId(previewSelect.value || 'R7');
-    return spec.type === 'number' ? spec.num : null;
+  // Einen Layout-Wert NUR für die aktuell gewählte Karte setzen.
+  function setLayout(prop, val) {
+    var id = currentCardId();
+    if (!settings.cardLayout) settings.cardLayout = {};
+    if (!settings.cardLayout[id]) settings.cardLayout[id] = {};
+    settings.cardLayout[id][prop] = val;
   }
 
   // Motiv-Schlüssel der aktuellen Karte (Farbe R/Y/G/B bzw. Z/N).
@@ -298,28 +314,30 @@
       ctx.fillRect(0, 0, W, H);
     }
 
+    var L = layoutFor(id);           // Zahl-Layout dieser Karte (mit Pro-Karte-Overrides)
+
     var num = imgs.numbers[spec.num];
     if (!num) {
       // Platzhalter-Zahl, damit die Vorschau auch ohne Upload etwas zeigt.
-      drawPlaceholderNumber(ctx, W, H, spec.num);
+      drawPlaceholderNumber(ctx, W, H, spec.num, L);
       return;
     }
 
     // Mittige Zahl
-    if (settings.centerOn) {
-      var targetH = settings.centerScale * H;
-      var cx = W / 2 + settings.centerX * W;
-      var cy = H / 2 + settings.centerY * H;
+    if (L.centerOn) {
+      var targetH = L.centerScale * H;
+      var cx = W / 2 + L.centerX * W;
+      var cy = H / 2 + L.centerY * H;
       drawGlyph(ctx, num, cx, cy, targetH, 0);
     }
 
     // Ecken-Zahlen
-    if (settings.cornerMode === 2 || settings.cornerMode === 4) {
-      var ch = cornerScaleFor(spec.num) * H;
+    if (L.cornerMode === 2 || L.cornerMode === 4) {
+      var ch = L.cornerScale * H;
       var cw = ch * ((num.naturalWidth || num.width) / (num.naturalHeight || num.height));
-      var insetSide = settings.cornerInsetSide * W;    // seitlicher Abstand (außen↔innen)
-      var insetTop = settings.cornerInsetTop * H;      // Abstand obere Ecken vom oberen Rand
-      var insetBottom = settings.cornerInsetBottom * H;// Abstand untere Ecken vom unteren Rand
+      var insetSide = L.cornerInsetSide * W;      // seitlicher Abstand (außen↔innen)
+      var insetTop = L.cornerInsetTop * H;        // Abstand obere Ecken vom oberen Rand
+      var insetBottom = L.cornerInsetBottom * H;  // Abstand untere Ecken vom unteren Rand
 
       // Alle Ecken-Zahlen stehen aufrecht (nie kopfüber).
       var tl = { x: insetSide + cw / 2, y: insetTop + ch / 2 };
@@ -327,7 +345,7 @@
       var tr = { x: W - insetSide - cw / 2, y: insetTop + ch / 2 };
       var bl = { x: insetSide + cw / 2, y: H - insetBottom - ch / 2 };
 
-      var corners = settings.cornerMode === 2 ? [tl, br] : [tl, tr, bl, br];
+      var corners = L.cornerMode === 2 ? [tl, br] : [tl, tr, bl, br];
       corners.forEach(function (p) { drawGlyph(ctx, num, p.x, p.y, ch, 0); });
     }
   }
@@ -342,12 +360,13 @@
     ctx.fillText(text, W / 2, H / 2);
   }
 
-  function drawPlaceholderNumber(ctx, W, H, n) {
+  function drawPlaceholderNumber(ctx, W, H, n, L) {
+    L = L || layoutFor(currentCardId());
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.font = 'bold ' + Math.round(H * settings.centerScale) + 'px system-ui, sans-serif';
+    ctx.font = 'bold ' + Math.round(H * L.centerScale) + 'px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(n), W / 2 + settings.centerX * W, H / 2 + settings.centerY * H);
+    ctx.fillText(String(n), W / 2 + L.centerX * W, H / 2 + L.centerY * H);
   }
 
   // ---- Vorschau aktualisieren ------------------------------------------
@@ -370,7 +389,7 @@
     } else {
       previewNote.textContent = 'Dateiname: ' + spec.color + spec.num + '.png';
     }
-    syncCornerScaleControl();
+    syncLayoutControls();
     syncFitControls();
   }
 
@@ -389,22 +408,29 @@
     }
   }
 
-  // Ecken-Größe-Regler auf die aktuell gewählte Zahl spiegeln.
-  function syncCornerScaleControl() {
-    var el = $('cornerScale'), out = $('cornerScaleOut'), forEl = $('cornerScaleFor');
-    if (!el) return;
-    var n = currentPreviewNum();
-    if (n == null) {                 // Zauberer/Narr: keine Ecken-Zahl
-      el.disabled = true;
-      if (out) out.textContent = '–';
-      if (forEl) forEl.textContent = '(–)';
-      return;
+  // Alle Zahl-Layout-Regler auf die aktuell gewählte Karte spiegeln.
+  function syncLayoutControls() {
+    var L = layoutFor(currentCardId());
+    var setR = function (id, v) {
+      var el = $(id), o = $(id + 'Out');
+      if (el) el.value = v;
+      if (o) o.textContent = pct(v);
+    };
+    setR('centerScale', L.centerScale);
+    setR('centerX', L.centerX);
+    setR('centerY', L.centerY);
+    setR('cornerScale', L.cornerScale);
+    setR('cornerInsetTop', L.cornerInsetTop);
+    setR('cornerInsetBottom', L.cornerInsetBottom);
+    setR('cornerInsetSide', L.cornerInsetSide);
+    var co = $('centerOn'); if (co) co.checked = L.centerOn;
+    var cm = $('cornerMode'); if (cm) cm.value = String(L.cornerMode);
+    var tag = $('layoutForCard');
+    if (tag) {
+      var spec = parseCardId(currentCardId());
+      if (spec.type === 'special') tag.textContent = (spec.kind === 'Z' ? 'Zauberer' : 'Narr');
+      else { var names = { R: 'Rot', Y: 'Gelb', G: 'Grün', B: 'Blau' }; tag.textContent = names[spec.color] + ' ' + spec.num; }
     }
-    el.disabled = false;
-    var v = cornerScaleFor(n);
-    el.value = v;
-    if (out) out.textContent = pct(v);
-    if (forEl) forEl.textContent = '(Zahl ' + n + ')';
   }
 
   function refreshAll() {
@@ -428,31 +454,56 @@
   }
 
   function bindControls() {
-    bindRange('centerScale', 'centerScale', pct);
-    bindRange('centerX', 'centerX', pct);
-    bindRange('centerY', 'centerY', pct);
-    bindRange('cornerInsetTop', 'cornerInsetTop', pct);
-    bindRange('cornerInsetBottom', 'cornerInsetBottom', pct);
-    bindRange('cornerInsetSide', 'cornerInsetSide', pct);
+    // Alle Zahl-Layout-Regler gelten NUR für die aktuell gewählte Karte.
+    function bindLayoutRange(elId, prop) {
+      var el = $(elId), out = $(elId + 'Out');
+      if (!el) return;
+      el.addEventListener('input', function () {
+        var v = parseFloat(el.value);
+        setLayout(prop, v);
+        if (out) out.textContent = pct(v);
+        saveSettings();
+        updatePreview();
+      });
+    }
+    bindLayoutRange('centerScale', 'centerScale');
+    bindLayoutRange('centerX', 'centerX');
+    bindLayoutRange('centerY', 'centerY');
+    bindLayoutRange('cornerScale', 'cornerScale');
+    bindLayoutRange('cornerInsetTop', 'cornerInsetTop');
+    bindLayoutRange('cornerInsetBottom', 'cornerInsetBottom');
+    bindLayoutRange('cornerInsetSide', 'cornerInsetSide');
 
-    // Ecken-Größe: gilt pro Zahl (die in der Vorschau gewählte).
-    var cornerScaleEl = $('cornerScale'), cornerScaleOut = $('cornerScaleOut');
-    cornerScaleEl.addEventListener('input', function () {
-      var n = currentPreviewNum();
-      if (n == null) return;
-      if (!settings.cornerScalePer) settings.cornerScalePer = {};
-      settings.cornerScalePer[n] = parseFloat(cornerScaleEl.value);
-      if (cornerScaleOut) cornerScaleOut.textContent = pct(settings.cornerScalePer[n]);
+    var centerOnEl = $('centerOn');
+    if (centerOnEl) centerOnEl.addEventListener('change', function () {
+      setLayout('centerOn', centerOnEl.checked); saveSettings(); updatePreview();
+    });
+    var cornerModeEl = $('cornerMode');
+    if (cornerModeEl) cornerModeEl.addEventListener('change', function () {
+      setLayout('cornerMode', parseInt(cornerModeEl.value, 10)); saveSettings(); updatePreview();
+    });
+
+    // Aktuelles Karten-Layout auf ALLE Zahlkarten übernehmen.
+    var applyAll = $('layoutApplyAll');
+    if (applyAll) applyAll.addEventListener('click', function () {
+      var L = layoutFor(currentCardId());
+      if (!settings.cardLayout) settings.cardLayout = {};
+      COLORS.forEach(function (c) {
+        NUMBERS.forEach(function (n) {
+          settings.cardLayout[c.key + n] = {
+            centerOn: L.centerOn, centerScale: L.centerScale, centerX: L.centerX, centerY: L.centerY,
+            cornerMode: L.cornerMode, cornerScale: L.cornerScale,
+            cornerInsetTop: L.cornerInsetTop, cornerInsetBottom: L.cornerInsetBottom, cornerInsetSide: L.cornerInsetSide
+          };
+        });
+      });
       saveSettings();
       updatePreview();
     });
-    var applyAll = $('cornerApplyAll');
-    if (applyAll) applyAll.addEventListener('click', function () {
-      var n = currentPreviewNum();
-      if (n == null) return;
-      var v = cornerScaleFor(n);
-      if (!settings.cornerScalePer) settings.cornerScalePer = {};
-      NUMBERS.forEach(function (k) { settings.cornerScalePer[k] = v; });
+    // Nur diese Karte auf die globalen Standardwerte zurücksetzen.
+    var resetCard = $('layoutResetCard');
+    if (resetCard) resetCard.addEventListener('click', function () {
+      if (settings.cardLayout) delete settings.cardLayout[currentCardId()];
       saveSettings();
       updatePreview();
     });
@@ -521,18 +572,6 @@
       }, { passive: false });
     }
 
-    var centerOn = $('centerOn');
-    centerOn.checked = settings.centerOn;
-    centerOn.addEventListener('change', function () {
-      settings.centerOn = centerOn.checked; saveSettings(); updatePreview();
-    });
-
-    var cornerMode = $('cornerMode');
-    cornerMode.value = String(settings.cornerMode);
-    cornerMode.addEventListener('change', function () {
-      settings.cornerMode = parseInt(cornerMode.value, 10); saveSettings(); updatePreview();
-    });
-
     var outWidth = $('outWidth');
     outWidth.value = settings.outWidth;
     outWidth.addEventListener('change', function () {
@@ -556,20 +595,9 @@
   }
 
   function syncControlsFromSettings() {
-    ['centerScale','centerX','centerY','cornerInsetTop','cornerInsetBottom','cornerInsetSide'].forEach(function (k) {
-      var el = $(k); var out = $(k + 'Out');
-      if (el) el.value = settings[k];
-      if (out) out.textContent = pct(settings[k]);
-    });
-    syncCornerScaleControl();
-    var setVal = function (id, v) {
-      var el = $(id);
-      if (!el) return;
-      if (el.type === 'checkbox') el.checked = v; else el.value = v;
-    };
-    setVal('centerOn', settings.centerOn);
-    setVal('cornerMode', String(settings.cornerMode));
-    setVal('outWidth', settings.outWidth);
+    syncLayoutControls();            // alle Zahl-Layout-Regler (pro aktueller Karte)
+    var outWidth = $('outWidth');
+    if (outWidth) outWidth.value = settings.outWidth;
   }
 
   function updateOutSizeNote() {

@@ -192,6 +192,8 @@ button.secondary { background: var(--panel-2); color: var(--text); }
 button.secondary:hover { border-color: var(--accent-2); }
 .settings button.small { padding: 5px 10px; font-size: 0.8rem; margin: -2px 0 12px; }
 .for-tag { color: var(--accent-2); font-weight: 600; font-size: 0.8rem; }
+.card-scope { border-left: 3px solid var(--accent); padding-left: 8px; }
+.layout-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
 input[type=range]:disabled { opacity: .4; }
 #previewCanvas.grabbing { cursor: grabbing; }
 
