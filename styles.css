@@ -31,6 +31,53 @@ body {
 .app-header h1 { margin: 0 0 6px; font-size: 1.6rem; }
 .subtitle { color: var(--muted); margin: 0; max-width: 900px; }
 
+.mode-switch {
+  display: flex;
+  gap: 8px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 8px 24px 0;
+}
+.mode-switch .tab {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+.mode-switch .tab.active {
+  color: #fff;
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(124,92,255,.35), rgba(91,140,255,.25));
+}
+
+/* Modus 2: Zuschneiden */
+.crop-slot { max-width: 1400px; margin: 12px auto 0; padding: 0 0 4px; }
+.crop-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  align-items: start;
+  margin-top: 12px;
+}
+@media (max-width: 900px) { .crop-layout { grid-template-columns: 1fr; } }
+.crop-stage {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  background: var(--panel-2);
+  border-radius: 8px;
+  min-height: 120px;
+}
+#cropCanvas { max-width: 100%; height: auto; border-radius: 6px; cursor: crosshair; touch-action: none; }
+.crop-controls label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin: 8px 0; }
+.crop-controls .row2 { display: flex; gap: 12px; }
+.crop-controls input[type=number], .crop-controls input[type=text] {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  border-radius: 6px; padding: 4px 6px; width: 90px;
+}
+.crop-controls input[type=text] { width: 100%; }
+.crop-controls .primary { width: 100%; margin-top: 8px; }
+
 .layout {
   display: grid;
   grid-template-columns: 1.2fr 0.9fr 1fr;

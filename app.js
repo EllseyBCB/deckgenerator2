@@ -839,6 +839,212 @@
     return out;
   }
 
+  // ================= Modus 2: Karten aus einem Bild zuschneiden ==========
+  var cropImg = null;
+  var cropFrame = { fx: 0.02, fy: 0.02, fw: 0.96, fh: 0.96 };
+  var cropView = { scale: 1, dw: 0, dh: 0 };
+
+  function cloneFrame(f) { return { fx: f.fx, fy: f.fy, fw: f.fw, fh: f.fh }; }
+  function cropColsVal() { return Math.max(1, Math.min(20, parseInt($('cropCols').value, 10) || 1)); }
+  function cropRowsVal() { return Math.max(1, Math.min(20, parseInt($('cropRows').value, 10) || 1)); }
+  function cropFmtVal() { var el = document.querySelector('input[name="cropFmt"]:checked'); return el ? el.value : 'wizard'; }
+
+  function cropTargetSize() {
+    var tw = Math.max(10, Math.min(4000, parseInt($('cropW').value, 10) || 660));
+    var th;
+    if (cropFmtVal() === 'wizard') th = Math.round(tw * ASPECT_H / ASPECT_W);
+    else th = Math.max(10, Math.min(4000, parseInt($('cropH').value, 10) || 1000));
+    return { tw: tw, th: th };
+  }
+
+  function drawCropOverlay() {
+    var canvas = $('cropCanvas'); if (!canvas) return;
+    if (!cropImg) { canvas.width = 0; canvas.height = 0; return; }
+    var iw = cropImg.naturalWidth || cropImg.width, ih = cropImg.naturalHeight || cropImg.height;
+    var scale = Math.min(560 / iw, 620 / ih, 1);
+    var dw = Math.max(1, Math.round(iw * scale)), dh = Math.max(1, Math.round(ih * scale));
+    cropView = { scale: scale, dw: dw, dh: dh };
+    canvas.width = dw; canvas.height = dh;
+    var c = canvas.getContext('2d');
+    c.clearRect(0, 0, dw, dh);
+    c.drawImage(cropImg, 0, 0, dw, dh);
+    var fx = cropFrame.fx * dw, fy = cropFrame.fy * dh, fw = cropFrame.fw * dw, fh = cropFrame.fh * dh;
+    c.fillStyle = 'rgba(0,0,0,0.45)';                  // außerhalb abdunkeln
+    c.fillRect(0, 0, dw, fy);
+    c.fillRect(0, fy + fh, dw, dh - (fy + fh));
+    c.fillRect(0, fy, fx, fh);
+    c.fillRect(fx + fw, fy, dw - (fx + fw), fh);
+    c.strokeStyle = 'rgba(124,92,255,0.95)'; c.lineWidth = 2;
+    c.strokeRect(fx, fy, fw, fh);
+    c.lineWidth = 1; c.strokeStyle = 'rgba(124,92,255,0.55)';
+    var cols = cropColsVal(), rows = cropRowsVal(), i, x, y;
+    for (i = 1; i < cols; i++) { x = fx + fw * i / cols; c.beginPath(); c.moveTo(x, fy); c.lineTo(x, fy + fh); c.stroke(); }
+    for (i = 1; i < rows; i++) { y = fy + fh * i / rows; c.beginPath(); c.moveTo(fx, y); c.lineTo(fx + fw, y); c.stroke(); }
+    c.fillStyle = '#7c5cff';
+    var pts = [[fx, fy], [fx + fw, fy], [fx, fy + fh], [fx + fw, fy + fh]];
+    for (i = 0; i < 4; i++) c.fillRect(pts[i][0] - 5, pts[i][1] - 5, 10, 10);
+  }
+
+  function cropCornerPts() {
+    var dw = cropView.dw, dh = cropView.dh;
+    return [
+      [cropFrame.fx * dw, cropFrame.fy * dh],
+      [(cropFrame.fx + cropFrame.fw) * dw, cropFrame.fy * dh],
+      [cropFrame.fx * dw, (cropFrame.fy + cropFrame.fh) * dh],
+      [(cropFrame.fx + cropFrame.fw) * dw, (cropFrame.fy + cropFrame.fh) * dh]
+    ];
+  }
+
+  function updateCropValidation() {
+    var box = $('cropValidation'), btn = $('cropBtn');
+    if (!box) return;
+    if (cropImg) {
+      box.innerHTML = '<span class="ok">✓ Bild geladen – ' + (cropColsVal() * cropRowsVal()) + ' Karte(n) im Raster.</span>';
+      if (btn) btn.disabled = false;
+    } else {
+      box.innerHTML = '<span class="missing">Bitte ein Bild mit Karten hochladen.</span>';
+      if (btn) btn.disabled = true;
+    }
+  }
+
+  function updateCropSizeNote() {
+    var s = cropTargetSize(), note = $('cropSizeNote');
+    if (note) note.textContent = 'Je Karte: ' + s.tw + '×' + s.th + ' px' + (cropFmtVal() === 'wizard' ? ' (33:50)' : '');
+  }
+
+  function applyCropFmt() {
+    var wrap = $('cropHWrap');
+    if (wrap) wrap.style.display = (cropFmtVal() === 'wizard') ? 'none' : '';
+    updateCropSizeNote();
+  }
+
+  // Quell-Ausschnitt "cover" in Zielgröße zeichnen (kein Rand, kein Verzerren).
+  function coverRect(ctx, img, sx, sy, sw, sh, dw, dh) {
+    var scale = Math.max(dw / sw, dh / sh);
+    var cw = dw / scale, ch = dh / scale;
+    var cx = sx + (sw - cw) / 2, cy = sy + (sh - ch) / 2;
+    ctx.drawImage(img, cx, cy, cw, ch, 0, 0, dw, dh);
+  }
+
+  function cropInit() {
+    if (!$('cropCanvas')) return;
+    makeSlot($('cropSlot'), {
+      label: 'Karten-Bild', sublabel: 'ein Bild mit mehreren Karten',
+      onLoad: function (img) { cropImg = img; cropFrame = { fx: 0.02, fy: 0.02, fw: 0.96, fh: 0.96 }; drawCropOverlay(); updateCropValidation(); },
+      onClear: function () { cropImg = null; drawCropOverlay(); updateCropValidation(); }
+    });
+
+    ['cropCols', 'cropRows'].forEach(function (id) {
+      var el = $(id);
+      if (el) el.addEventListener('input', function () { drawCropOverlay(); updateCropValidation(); });
+    });
+    Array.prototype.forEach.call(document.getElementsByName('cropFmt'), function (r) { r.addEventListener('change', applyCropFmt); });
+    var cwEl = $('cropW'); if (cwEl) cwEl.addEventListener('input', updateCropSizeNote);
+    var chEl = $('cropH'); if (chEl) chEl.addEventListener('input', updateCropSizeNote);
+    var reset = $('cropReset'); if (reset) reset.addEventListener('click', function () { cropFrame = { fx: 0.02, fy: 0.02, fw: 0.96, fh: 0.96 }; drawCropOverlay(); });
+    var btn = $('cropBtn'); if (btn) btn.addEventListener('click', doCrop);
+
+    // Rahmen ziehen: innen = bewegen, Ecken = Größe ändern.
+    var canvas = $('cropCanvas');
+    var mode = null, startPt = null, startFrame = null;
+    function toCanvas(e) { var r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * (canvas.width / r.width), y: (e.clientY - r.top) * (canvas.height / r.height) }; }
+    canvas.addEventListener('pointerdown', function (e) {
+      if (!cropImg) return;
+      var p = toCanvas(e), pts = cropCornerPts(), i;
+      mode = null;
+      for (i = 0; i < 4; i++) { if (Math.abs(p.x - pts[i][0]) < 13 && Math.abs(p.y - pts[i][1]) < 13) { mode = 'c' + i; break; } }
+      if (!mode) {
+        var dw = cropView.dw, dh = cropView.dh;
+        var fx = cropFrame.fx * dw, fy = cropFrame.fy * dh, fw = cropFrame.fw * dw, fh = cropFrame.fh * dh;
+        if (p.x >= fx && p.x <= fx + fw && p.y >= fy && p.y <= fy + fh) mode = 'move';
+      }
+      if (mode) { startPt = p; startFrame = cloneFrame(cropFrame); try { canvas.setPointerCapture(e.pointerId); } catch (x) {} }
+    });
+    canvas.addEventListener('pointermove', function (e) {
+      if (!mode) return;
+      var p = toCanvas(e), dw = cropView.dw, dh = cropView.dh;
+      var dx = (p.x - startPt.x) / dw, dy = (p.y - startPt.y) / dh;
+      var f = cloneFrame(startFrame);
+      var left = startFrame.fx, top = startFrame.fy, right = startFrame.fx + startFrame.fw, bottom = startFrame.fy + startFrame.fh;
+      var MIN = 0.03;
+      if (mode === 'move') {
+        f.fx = clamp(startFrame.fx + dx, 0, 1 - startFrame.fw);
+        f.fy = clamp(startFrame.fy + dy, 0, 1 - startFrame.fh);
+      } else if (mode === 'c0') { var nx = clamp(left + dx, 0, right - MIN), ny = clamp(top + dy, 0, bottom - MIN); f.fx = nx; f.fy = ny; f.fw = right - nx; f.fh = bottom - ny; }
+      else if (mode === 'c1') { var nr = clamp(right + dx, left + MIN, 1), ny1 = clamp(top + dy, 0, bottom - MIN); f.fx = left; f.fy = ny1; f.fw = nr - left; f.fh = bottom - ny1; }
+      else if (mode === 'c2') { var nx2 = clamp(left + dx, 0, right - MIN), nb = clamp(bottom + dy, top + MIN, 1); f.fx = nx2; f.fy = top; f.fw = right - nx2; f.fh = nb - top; }
+      else if (mode === 'c3') { var nr3 = clamp(right + dx, left + MIN, 1), nb3 = clamp(bottom + dy, top + MIN, 1); f.fx = left; f.fy = top; f.fw = nr3 - left; f.fh = nb3 - top; }
+      cropFrame = f; drawCropOverlay();
+    });
+    function endDrag(e) { if (mode) { mode = null; try { canvas.releasePointerCapture(e.pointerId); } catch (x) {} } }
+    canvas.addEventListener('pointerup', endDrag);
+    canvas.addEventListener('pointercancel', endDrag);
+
+    applyCropFmt();
+    drawCropOverlay();
+    updateCropValidation();
+  }
+
+  var cropping = false;
+  function doCrop() {
+    if (cropping || !cropImg) return;
+    cropping = true;
+    var btn = $('cropBtn'); if (btn) btn.disabled = true;
+    var prog = $('cropProgress'), fill = $('cropFill'), label = $('cropLabel');
+    if (prog) prog.hidden = false;
+
+    var iw = cropImg.naturalWidth || cropImg.width, ih = cropImg.naturalHeight || cropImg.height;
+    var cols = cropColsVal(), rows = cropRowsVal();
+    var size = cropTargetSize(), tw = size.tw, th = size.th;
+    var prefix = (($('cropPrefix').value || 'karte').replace(/[^A-Za-z0-9_\-]/g, '') || 'karte');
+    var work = document.createElement('canvas'); work.width = tw; work.height = th;
+    var wctx = work.getContext('2d'); wctx.imageSmoothingEnabled = true; wctx.imageSmoothingQuality = 'high';
+
+    var cells = [];
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) cells.push({ r: r, c: c });
+    var files = [], i = 0;
+
+    function stepCell() {
+      if (i >= cells.length) return finishCrop();
+      var cell = cells[i];
+      var cellX = (cropFrame.fx + cell.c * cropFrame.fw / cols) * iw;
+      var cellY = (cropFrame.fy + cell.r * cropFrame.fh / rows) * ih;
+      var cellW = (cropFrame.fw / cols) * iw, cellH = (cropFrame.fh / rows) * ih;
+      wctx.clearRect(0, 0, tw, th);
+      coverRect(wctx, cropImg, cellX, cellY, cellW, cellH, tw, th);
+      work.toBlob(function (blob) {
+        blob.arrayBuffer().then(function (buf) {
+          files.push({ name: prefix + '-' + (i + 1) + '.png', data: new Uint8Array(buf) });
+          i++;
+          if (fill) fill.style.width = Math.round(i / cells.length * 100) + '%';
+          if (label) label.textContent = i + ' / ' + cells.length + ' Karten';
+          setTimeout(stepCell, 0);
+        });
+      }, 'image/png');
+    }
+    function finishCrop() {
+      var zip = createZip(files);
+      var url = URL.createObjectURL(new Blob([zip], { type: 'application/zip' }));
+      var link = $('cropDownload');
+      link.href = url; link.download = 'karten-zugeschnitten.zip'; link.hidden = false; link.click();
+      if (label) label.textContent = '✓ ' + files.length + ' Karten zugeschnitten · ZIP heruntergeladen';
+      if (fill) fill.style.width = '100%';
+      if (btn) btn.disabled = false;
+      cropping = false;
+    }
+    stepCell();
+  }
+
+  function showMode(which) {
+    var d = $('modeDeck'), c = $('modeCrop');
+    if (d) d.hidden = which !== 'deck';
+    if (c) c.hidden = which !== 'crop';
+    var td = $('tabDeck'), tc = $('tabCrop');
+    if (td) td.classList.toggle('active', which === 'deck');
+    if (tc) tc.classList.toggle('active', which === 'crop');
+    if (which === 'crop') drawCropOverlay();
+  }
+
   // ---- Init -------------------------------------------------------------
   // Jeder Schritt einzeln abgesichert: Selbst wenn ein Bedienelement fehlt
   // (z. B. veraltete HTML/JS-Mischung aus dem Browser-Cache), wird die
@@ -854,6 +1060,12 @@
     step('syncControlsFromSettings', syncControlsFromSettings);
     step('refreshAll', refreshAll);
     step('updatePreview', updatePreview); // Sicherheitsnetz für die Vorschau
+    step('cropInit', cropInit);           // Modus 2: Karten zuschneiden
+    step('cropTabs', function () {
+      var td = $('tabDeck'), tc = $('tabCrop');
+      if (td) td.addEventListener('click', function () { showMode('deck'); });
+      if (tc) tc.addEventListener('click', function () { showMode('crop'); });
+    });
   }
 
   if (document.readyState === 'loading') {

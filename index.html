@@ -16,6 +16,12 @@
     </p>
   </header>
 
+  <div class="mode-switch">
+    <button type="button" id="tabDeck" class="tab active">🎴 Deck-Generator</button>
+    <button type="button" id="tabCrop" class="tab">✂️ Karten zuschneiden</button>
+  </div>
+
+  <div id="modeDeck">
   <main class="layout">
     <!-- Linke Spalte: Uploads -->
     <section class="panel uploads">
@@ -161,15 +167,59 @@
     </div>
     <a id="downloadLink" hidden></a>
   </section>
+  </div><!-- /modeDeck -->
+
+  <div id="modeCrop" hidden>
+    <section class="panel">
+      <h2>✂️ Karten aus einem Bild zuschneiden</h2>
+      <p class="hint">
+        Lade <strong>ein Bild mit mehreren Karten</strong> hoch. Stelle Spalten ×
+        Zeilen ein und ziehe den Rahmen passend über die Karten (Rahmen bewegen:
+        innen ziehen · Größe ändern: an den Ecken ziehen). Jede Rasterzelle wird
+        als eigene Karte im gewählten Format exportiert.
+      </p>
+      <div class="crop-slot" id="cropSlot"></div>
+      <div class="crop-layout">
+        <div class="crop-stage">
+          <canvas id="cropCanvas"></canvas>
+        </div>
+        <div class="crop-controls">
+          <div class="row2">
+            <label>Spalten <input type="number" id="cropCols" min="1" max="20" value="1" /></label>
+            <label>Zeilen <input type="number" id="cropRows" min="1" max="20" value="1" /></label>
+          </div>
+          <fieldset>
+            <legend>Ausgabegröße je Karte</legend>
+            <label class="checkbox"><input type="radio" name="cropFmt" value="wizard" checked /> Wizard 33:50</label>
+            <label class="checkbox"><input type="radio" name="cropFmt" value="free" /> Freie Größe / Verhältnis</label>
+            <div class="row2">
+              <label>Breite (px) <input type="number" id="cropW" min="10" max="4000" value="660" /></label>
+              <label id="cropHWrap">Höhe (px) <input type="number" id="cropH" min="10" max="4000" value="1000" /></label>
+            </div>
+            <p class="hint" id="cropSizeNote"></p>
+          </fieldset>
+          <label>Dateiname-Präfix <input type="text" id="cropPrefix" value="karte" maxlength="30" /></label>
+          <button type="button" id="cropReset" class="secondary small">Rahmen zurücksetzen</button>
+          <div id="cropValidation" class="validation"></div>
+          <button type="button" id="cropBtn" class="primary">Karten zuschneiden → ZIP</button>
+          <div class="progress" id="cropProgress" hidden>
+            <div class="progress-bar"><div class="progress-fill" id="cropFill"></div></div>
+            <span id="cropLabel"></span>
+          </div>
+          <a id="cropDownload" hidden></a>
+        </div>
+      </div>
+    </section>
+  </div><!-- /modeCrop -->
 
   <footer class="app-footer">
     <p>
       Format je Karte: PNG · exakt 33:50 · Rahmen randlos an allen Kanten ·
       Dateien: R1–R13, Y1–Y13, G1–G13, B1–B13, Z1–Z4, N1–N4 · keine back.png
     </p>
-    <p>Version <strong id="appVersion">14</strong> · Zahl-Positionen pro Karte einzeln</p>
+    <p>Version <strong id="appVersion">15</strong> · neuer Modus „Karten zuschneiden"</p>
   </footer>
 
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

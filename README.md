@@ -7,6 +7,12 @@ ausgibt – fertig zum Einfügen ins Spiel.
 Läuft komplett **lokal im Browser**: keine Installation, kein Server, keine
 Internetverbindung nötig. Deine Bilder verlassen deinen Rechner nicht.
 
+Das Tool hat zwei Modi (oben umschaltbar):
+- **🎴 Deck-Generator** – aus Einzelbildern ein komplettes 60-Karten-Deck bauen.
+- **✂️ Karten zuschneiden** – ein Bild mit mehreren Karten hochladen, ein Raster
+  + verschiebbaren Rahmen drüberlegen und jede Zelle als eigene Karte
+  exportieren (Ausgabe frei wählbar oder Wizard 33:50), alles als ZIP.
+
 ## Benutzen
 
 1. `index.html` im Browser öffnen (Doppelklick genügt).
